@@ -3,8 +3,8 @@ let whiteTexture, blackTexture
 
 
 function preload() {
-  whiteTexture = loadImage("Assets/henry-co-tqu0IOMaiU8-unsplash.jpg")
-  blackTexture = loadImage("Assets/pawel-czerwinski-BPrk2cOoCq8-unsplash.jpg")
+  whiteTexture = loadImage("../Assets/whiteMarble.jpg")
+  blackTexture = loadImage("../Assets/blackMarble.jpg")
 }
 
 function setup() {
