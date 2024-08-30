@@ -1,5 +1,0 @@
-class GenerateTexture {
-  constructor() {
-    
-  }
-}

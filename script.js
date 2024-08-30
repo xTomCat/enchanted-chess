@@ -1,42 +1,222 @@
 let chessBoard = []
 let whiteTexture, blackTexture
+let mousePressedInBoard = false
+let guiGraphics
 
-
+let gl
 function preload() {
   whiteTexture = loadImage("../Assets/whiteMarble.jpg")
   blackTexture = loadImage("../Assets/blackMarble.jpg")
+  montserrat = loadFont("../Assets/Montserrat-Bold.ttf")
+  inconsolata = loadFont("../Assets/Inconsolata-Bold.ttf")
 }
 
 function setup() {
-  createCanvas(windowWidth-15, windowHeight-15, WEBGL)
+  let canvas = createCanvas(windowWidth-15, windowHeight-15, WEBGL)
   chessBoard = new Chessboard(9, 9, 20, whiteTexture, blackTexture)
+  p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
+  chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
+  cam = createCamera()
+  gl = this._renderer.GL;
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.FRONT)
+  cam.eyeZ = 300
+  cam.eyeX = 340
+  cam.eyeY = -340
+  console.log(cam)
+  guiGraphics = createGraphics(windowWidth-15, windowHeight-15)
+  console.log("W: " + windowWidth + ", H: " + windowHeight)
+  textFont(inconsolata)
+  textSize(5)
+  textAlign(CENTER)
 }
 
 function draw() {
-  //debugMode()
-  background(200)
-  orbitControl()
-  //lightFalloff(0.45, 0, 0)
-  //pointLight(255, 255, 255, 100, -100, 100)
+  background(50)
+  cam.lookAt(0,0,0)
+  if(!mousePressedInBoard){
+     orbitControl()
+  }
+  push()
   drawChessBoard(chessBoard)
+  pop()
+  push()
+  renderGUI()
+  pop()
+  
+}
+
+function renderGUI() {
+  let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX)
+  let tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
+  gl.disable(gl.CULL_FACE)
+  translate(cam.eyeX, cam.eyeY, cam.eyeZ)
+  rotateY(-pan)
+  rotateZ(tilt + PI)
+  translate(100, 0, 0)
+  rotateY(-PI/2)
+  rotateZ(PI)
+  let bottomRightCornerX = windowWidth/16
+  let bottomRightCornerY = windowHeight/16
+  push()
+    fill(150)
+    rectMode(CORNERS)
+    rect(bottomRightCornerX*0.95, bottomRightCornerY*0.95, (bottomRightCornerX*0.95) - 50, (bottomRightCornerY*0.95) - 15)
+  pop()
+  push()
+    textAlign(RIGHT)
+    fill(255)
+    translate((bottomRightCornerX*0.95), (bottomRightCornerY*0.95)-20, 0)
+    text('This is a 2d HUD element', 0, 0);
+  pop()
+  //ellipse(windowWidth/16, windowHeight/16, 5)
+  
 
 }
 
 function drawChessBoard(chessBoardObject) {
-  let chessBoard = chessBoardObject.getBoard()
-  let tileSize = chessBoardObject.getTileSize()
-  let offsetX = (chessBoard[0].length-1)*(tileSize/2) - (tileSize/2)
-  let offsetY = (chessBoard.length-1)*(tileSize/2) - (tileSize/2)
-  for (let i = 0; i < chessBoard.length-1; i++) {
-    for (let j = 0; j < chessBoard[i + 1].length-1; j++) {
-      push()
-      translate((j*tileSize)-offsetX, 0, (i*tileSize)-offsetY)
+  gl.cullFace(gl.FRONT)
+  let chessBoard = chessBoardObject.getBoard();
+  let tileSize = chessBoardObject.getTileSize();
+  let boardHeight = chessBoardObject.getHeight();
+  let boardWidth = chessBoardObject.getWidth();
+  //Get the hovered tile
+  let hoveredTile = getSelectedTile(mouseX, mouseY, chessBoardObject)
+  for (let i = 0; i < boardWidth; i++) {
+    for (let j = 0; j < boardHeight; j++) {
+      push();
+      //If the hovered tile isn't null, set that tile to be hovered with JSON data.
+      if (hoveredTile) {
+      if (i == hoveredTile.x && j == hoveredTile.y) {
+        chessBoard[i][j].hovered = true
+      } else {chessBoard[i][j].hovered = false}
+      } else {chessBoard[i][j].hovered = false}
+      translate(chessBoard[i][j].x, chessBoard[i][j].y, chessBoard[i][j].z);
+      rotateX(PI/2)
+      rotateZ(PI/2)
       let tileTexture = chessBoardObject.getTileTexture(i, j);
-      texture(tileTexture)
-      shininess(100)
-      box(tileSize, 10, tileSize)
-      pop()
+      //Render the tiles differently if they're selected or hovered
+      if (chessBoard[i][j].selected == true) {
+        fill(0,255,0)
+        noStroke()
+      }
+      else if (chessBoard[i][j].hovered == true) {
+        fill(255,0,0)
+        noStroke()
+      } else {
+        stroke(0,0,0)
+        texture(tileTexture);
+      }
+      shininess(100);
+      square(0, 0, tileSize)
+      translate(0, 0, -tileSize/2);
+      rotateX(PI)
+      //rotateZ(PI/2)
+      //rotateY(PI/2)
+      square(0, 0, tileSize)
+      //Draw the sides for the top of the chessboard
+      if (i == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
+        push()
+        translate(-tileSize/2, 0, -tileSize/4)
+        rotateX(PI/2)
+        rotateY(PI*1.5)
+        rect(0,0, tileSize, tileSize/2)
+        pop()
+      //Draw the sides for the bottom of the chessboard
+      } else if (i == boardWidth-1 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
+        push()
+        translate(tileSize/2, 0, -tileSize/4)
+        rotateX(PI*1.5)
+        rotateY(PI/2)
+        rect(0,0, tileSize, tileSize/2)
+        pop()
+      }
+      //Draw the sides for the left side of the chessboard
+      if (j == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
+        push()
+        translate(0, -tileSize/2, -tileSize/4)
+        rotateX(PI*1.5)
+        rotateY(PI)
+        rect(0,0, tileSize, tileSize/2)
+        pop()
+        //Draw the sides for the right side of the chessboard
+      } else if (j == boardHeight-1 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
+        push()
+        translate(0, tileSize/2, -tileSize/4)
+        rotateX(PI*1.5)
+        rotateY(PI*2)
+        rect(0,0, tileSize, tileSize/2)
+        pop()
+      }
+      pop();
     }
+  }
+}
+
+
+function keyPressed() {
+  if (key === 'c') {
+    let selectedTile = getSelectedTile(mouseX, mouseY, chessBoard)
+    if (selectedTile) {
+      console.log("Tile selected: (" + (selectedTile.x)+ "," + (selectedTile.y)+")")
+      chessBoardArray[selectedTile.x][selectedTile.y].selected = true
+      console.log(selectedTile)
+      //playerTileSelected = [selectedTile.x, selectedTile.z]
+    }
+  }
+  if (key === 'e') {
+    console.log("X: " + cam.eyeX)
+    console.log("Y: " + cam.eyeY)
+    console.log("Z: " + cam.eyeZ)
+    console.log("FOV: " + cam.cameraFOV)
+  }
+
+}
+
+function selectTile(chessBoardObject, x, y) {
+  let chessBoard = chessBoardObject.getBoard();
+  if (!chessBoard[x][y].selected) {
+    for (let i = 0; i < chessBoardObject.getWidth(); i++) {
+      for (let j = 0; j < chessBoardObject.getHeight(); j++) {
+        chessBoard[i][j].selected = false
+  chessBoard[x][y].selected = true
+
+      }}
+  } else {
+    chessBoard[x][y].selected = false
+  }
+}
+
+function mousePressed() {
+  let hoveredTile = getSelectedTile(mouseX, mouseY, chessBoard)
+  if (hoveredTile) {
+    mousePressedInBoard = true
+    selectTile(chessBoard, hoveredTile.x, hoveredTile.y)
+  } else{
+    mousePressedInBoard = false
+  }
+}
+
+function mouseReleased() {
+  mousePressedInBoard = false
+}
+
+
+function worldToBoardIndices(worldX, worldZ, chessBoardObject) {
+  let tileSize = chessBoardObject.getTileSize();
+  let boardWidth = chessBoardObject.getWidth();
+  let boardHeight = chessBoardObject.getHeight();
+
+  let halfBoardWidth = (boardWidth * tileSize) / 2;
+  let halfBoardHeight = (boardHeight * tileSize) / 2;
+
+  let boardZ = Math.floor((worldX + halfBoardWidth) / tileSize);
+  let boardX = Math.floor((worldZ + halfBoardHeight) / tileSize);
+
+  if (boardX >= 0 && boardX < boardWidth && boardZ >= 0 && boardZ < boardHeight) {
+    return { x: boardX, y: boardZ };
+  } else {
+    return null;
   }
 }
