@@ -2,18 +2,25 @@ let chessBoard = []
 let whiteTexture, blackTexture
 let mousePressedInBoard = false
 let guiGraphics
-
 let gl
+
 function preload() {
-  whiteTexture = loadImage("../Assets/whiteMarble.jpg")
-  blackTexture = loadImage("../Assets/blackMarble.jpg")
-  montserrat = loadFont("../Assets/Montserrat-Bold.ttf")
-  inconsolata = loadFont("../Assets/Inconsolata-Bold.ttf")
+  whiteTexture = loadImage("Assets/whiteMarble.jpg");
+  blackTexture = loadImage("Assets/blackMarble.jpg");
+  montserrat = loadFont("Assets/Montserrat-Bold.ttf");
+  inconsolata = loadFont("Assets/Inconsolata-Bold.ttf");
+  bishopModel = loadModel('Assets/models/chessBishop.obj');
+  rookModel = loadModel('Assets/models/chessCastle.obj');
+  knightModel = loadModel('Assets/models/chessKnight.obj');
+  pawnModel = loadModel('Assets/models/chessPawn.obj');
+  queenModel = loadModel('Assets/models/chessQueen.obj');
+  kingModel = loadModel('Assets/models/chessKing.obj');
 }
 
 function setup() {
   let canvas = createCanvas(windowWidth-15, windowHeight-15, WEBGL)
-  chessBoard = new Chessboard(9, 9, 20, whiteTexture, blackTexture)
+  chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
+  chessBoard.populateBoard()
   p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
   chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
@@ -104,17 +111,25 @@ function drawChessBoard(chessBoardObject) {
       else if (chessBoard[i][j].hovered == true) {
         fill(255,0,0)
         noStroke()
-      } else {
+      } 
+      else {
         stroke(0,0,0)
         texture(tileTexture);
       }
+      if (chessBoard[i][j].piece) {
+        chessBoard[i][j].piece.drawModel()
+      }
+      
+      
+
       shininess(100);
+      tint(200, 255)
       square(0, 0, tileSize)
+      
       translate(0, 0, -tileSize/2);
       rotateX(PI)
-      //rotateZ(PI/2)
-      //rotateY(PI/2)
       square(0, 0, tileSize)
+      
       //Draw the sides for the top of the chessboard
       if (i == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
         push()
@@ -176,11 +191,24 @@ function keyPressed() {
 
 function selectTile(chessBoardObject, x, y) {
   let chessBoard = chessBoardObject.getBoard();
+  let pieceMoved = false
+  console.log(chessBoardObject.getTileData(x, y))
   if (!chessBoard[x][y].selected) {
     for (let i = 0; i < chessBoardObject.getWidth(); i++) {
       for (let j = 0; j < chessBoardObject.getHeight(); j++) {
+        
+        if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor())) {
+          let piece = chessBoard[i][j].piece
+          chessBoardObject.setTileData(x, y, { piece: piece})
+          chessBoardObject.setTileData(i, j, { piece: null})
+          pieceMoved = true
+        }
         chessBoard[i][j].selected = false
-  chessBoard[x][y].selected = true
+  if (pieceMoved) {
+    chessBoard[x][y].selected = false
+  } else {
+    chessBoard[x][y].selected = true
+  }
 
       }}
   } else {
