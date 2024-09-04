@@ -81,6 +81,10 @@ class Chessboard {
     }
   }
   populateBoard() {
+    for (let i = 0; i < this.width; i++) {
+      this.setTileData(i, 1, { piece: new ChessPiece("pawn", "black") });
+      this.setTileData(i, this.height - 2, { piece: new ChessPiece("pawn", "white") });
+    }
     this.setTileData(0, 0, { piece: new ChessPiece("rook", "black") });
     this.setTileData(1, 0, { piece: new ChessPiece("knight", "black") });
     this.setTileData(2, 0, { piece: new ChessPiece("bishop", "black") });

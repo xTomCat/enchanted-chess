@@ -55,28 +55,42 @@ function draw() {
 }
 
 function renderGUI() {
+  const maxcamtilt = -1.5
+  const mincamtilt = 1.5
   let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX)
-  let tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
+  let camtilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
+  cam.eyeY = cam.centerY + dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ) * tan(camtilt);
+  //console.log("Pan: " + pan + ", camtilt: " + camtilt)
   gl.disable(gl.CULL_FACE)
   translate(cam.eyeX, cam.eyeY, cam.eyeZ)
   rotateY(-pan)
-  rotateZ(tilt + PI)
+  rotateZ(camtilt + PI)
   translate(100, 0, 0)
   rotateY(-PI/2)
   rotateZ(PI)
-  let bottomRightCornerX = windowWidth/16
-  let bottomRightCornerY = windowHeight/16
   push()
     fill(150)
-    rectMode(CORNERS)
-    rect(bottomRightCornerX*0.95, bottomRightCornerY*0.95, (bottomRightCornerX*0.95) - 50, (bottomRightCornerY*0.95) - 15)
+    rectMode(CENTER)
+    fill(225, 225, 0)
+    rect(0, (windowHeight/16)*0.85, windowWidth/32, windowHeight/48)
   pop()
   push()
-    textAlign(RIGHT)
+    
+    //console.log(maxcamtilt, mincamtilt)
+    // Clamp the camera's camtilt angle
+    if (camtilt < maxcamtilt) {
+      this._renderer.rotateVelocity.y += -0.1
+      //cam._orbit(0, -0.05, 0)
+      
+    } else if (camtilt > mincamtilt) {
+      this._renderer.rotateVelocity.y += 0.1
+      //cam._orbit(0, 0.05, 0)
+    }
+    textAlign(LEFT)
     fill(255)
-    translate((bottomRightCornerX*0.95), (bottomRightCornerY*0.95)-20, 0)
-    text('This is a 2d HUD element', 0, 0);
   pop()
+
+  
   //ellipse(windowWidth/16, windowHeight/16, 5)
   
 
@@ -218,6 +232,7 @@ function selectTile(chessBoardObject, x, y) {
 
 function mousePressed() {
   let hoveredTile = getSelectedTile(mouseX, mouseY, chessBoard)
+  console.log("X: " + mouseX + " Y" + mouseY)
   if (hoveredTile) {
     mousePressedInBoard = true
     selectTile(chessBoard, hoveredTile.x, hoveredTile.y)

@@ -6,13 +6,11 @@ class ChessPiece {
     let tileGraphic = createGraphics(resolution, resolution)
     let sx, sy
     if (this.color === "black") {
-      //this.texture = blackTexture.resize(blackTexture.width/2, blackTexture.height/2)
       this.texture = createGraphics(resolution, resolution)
       sx = random(blackTexture.width - resolution);
       sy = random(blackTexture.height - resolution);
       this.texture.image(blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
     } else {
-      //this.texture = whiteTexture.resize(whiteTexture.width/2, whiteTexture.height/2)
       this.texture = createGraphics(resolution, resolution)
       sx = random(whiteTexture.width - resolution);
       sy = random(whiteTexture.height - resolution);
