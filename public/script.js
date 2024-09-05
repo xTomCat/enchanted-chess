@@ -19,7 +19,14 @@ function preload() {
 }
 
 function setup() {
+  socket = io()
   let canvas = createCanvas(windowWidth-15, windowHeight-15, WEBGL)
+  let joinRoomButton = createButton('Join a room')
+  let nickNameButton = createButton('Choose your nickname')
+  nickNameButton.position(8, windowHeight-48)
+  nickNameButton.mousePressed(promptNickName)
+  joinRoomButton.position(8, windowHeight-28)
+  joinRoomButton.mousePressed(joinGameByRoomCode)
   chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
   chessBoard.populateBoard()
   p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
@@ -39,13 +46,28 @@ function setup() {
   textSize(5)
   textAlign(CENTER)
 
-  socket = io()
+  
 
   socket.on('move', (move) => {
     console.log("Move received: " + move)
     chessBoard.move(move)
   })
     
+}
+
+function promptNickName() {
+  let nickname = prompt("Please enter your nickname")
+  console.log("Nickname: " + nickname)
+  if (nickname) {
+    socket.emit('nickname', nickname)
+  }
+}
+
+function joinGameByRoomCode() {
+  let roomCode = prompt("Please enter the room code")
+  if (roomCode) {
+    socket.emit('joinGame', roomCode)
+  }
 }
 
 function draw() {
