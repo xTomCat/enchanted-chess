@@ -80,6 +80,14 @@ class Chessboard {
       return null;
     }
   }
+  move(move) {
+    let from = move.from;
+    let to = move.to;
+    let piece = this.getTileData(from.x, from.y).piece;
+    this.setTileData(to.x, to.y, { piece: piece });
+    this.setTileData(from.x, from.y, { piece: null });
+  }
+
   populateBoard() {
     for (let i = 0; i < this.width; i++) {
       this.setTileData(i, 1, { piece: new ChessPiece("pawn", "black") });

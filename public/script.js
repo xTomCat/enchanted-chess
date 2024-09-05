@@ -3,6 +3,7 @@ let whiteTexture, blackTexture
 let mousePressedInBoard = false
 let guiGraphics
 let gl
+let socket
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -37,6 +38,14 @@ function setup() {
   textFont(inconsolata)
   textSize(5)
   textAlign(CENTER)
+
+  socket = io()
+
+  socket.on('move', (move) => {
+    console.log("Move received: " + move)
+    chessBoard.move(move)
+  })
+    
 }
 
 function draw() {
@@ -71,8 +80,8 @@ function renderGUI() {
   push()
     fill(150)
     rectMode(CENTER)
-    fill(225, 225, 0)
-    rect(0, (windowHeight/16)*0.85, windowWidth/32, windowHeight/48)
+    fill(100)
+    rect(0, (windowHeight/16)*0.85, windowWidth/16, windowHeight/48)
   pop()
   push()
     
@@ -203,6 +212,8 @@ function keyPressed() {
 
 }
 
+
+
 function selectTile(chessBoardObject, x, y) {
   let chessBoard = chessBoardObject.getBoard();
   let pieceMoved = false
@@ -212,9 +223,12 @@ function selectTile(chessBoardObject, x, y) {
       for (let j = 0; j < chessBoardObject.getHeight(); j++) {
         
         if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor())) {
-          let piece = chessBoard[i][j].piece
-          chessBoardObject.setTileData(x, y, { piece: piece})
-          chessBoardObject.setTileData(i, j, { piece: null})
+          move = {
+            from: {x: i, y: j},
+            to: {x: x, y: y}
+          }
+          chessBoardObject.move(move)
+          socket.emit('move', move)
           pieceMoved = true
         }
         chessBoard[i][j].selected = false
