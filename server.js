@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const PORT = process.env.PORT || 3000;
 
 let connectedPlayers = [];
+let games = {};
 
 app.use(express.static('public'));
 
@@ -54,10 +55,28 @@ io.on('connection', (socket) => {
         let roomCode = generateRoomCode6Digits();
         socket.join('game-' + roomCode);
 
-        const player = connectedPlayers.find(p => p.socketId === socketId)
+        const player = connectedPlayers.find(p => p.socketId === socket.id)
         const game = new Game(roomCode);
+        games[roomCode] = game;
         game.addPlayer(player);
+        console.log(player.name + ' created a room with code: ' + roomCode);
         console.log(game.getPlayers());
+        console.log(games)
+    });
+
+    socket.on('joinGame', (roomCode) => {
+        const player = connectedPlayers.find(p => p.socketId === socket.id)
+        const game = games[roomCode];
+        console.log("attempting to join game with room code: " + roomCode)
+        console.log("game found: " + game)
+        if (game) {
+            game.addPlayer(player);
+            socket.join('game-' + roomCode);
+            console.log(player.name + ' joined a room with code: ' + roomCode);
+            console.log(game.getPlayers());
+        } else {
+            io.to(socket.id).emit('error', 'Room code not found!')
+        }
     })
 })
 
