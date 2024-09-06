@@ -30,7 +30,7 @@ io.on('connection', (socket) => {
         } else {
             io.to(socket.id).emit('error', 'You need to set a nickname first!')
         }
-    })
+    });
 
     socket.on('disconnect', () => {
         console.log('Client disconnected with IP: ' + socket.handshake.address);
@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
         logConnectedPlayers();
     });
 
-    socket.on('nickname', (nickname) => {
+    socket.on('nickname', (nickname, roomCode) => {
         const player = connectedPlayers.find(p => p.socketId === socket.id);
         console.log("Changing nickname of player with ID: " + socket.id);
         console.log("changing the name of: " + player)
@@ -48,6 +48,11 @@ io.on('connection', (socket) => {
             io.to(socket.id).emit('nicknameChanged', nickname);
             console.log(`Nickname changed to ${nickname}`);
             logConnectedPlayers()
+            if (roomCode) {
+                if (games[roomCode]) {
+                    sendGameDataToRoom(roomCode)
+                }
+        }
         }
     });
 
@@ -62,6 +67,8 @@ io.on('connection', (socket) => {
         console.log(player.name + ' created a room with code: ' + roomCode);
         console.log(game.getPlayers());
         console.log(games)
+        io.to(socket.id).emit('roomCreated', roomCode, player.name);
+        sendGameDataToRoom(roomCode)
     });
 
     socket.on('joinGame', (roomCode) => {
@@ -69,7 +76,7 @@ io.on('connection', (socket) => {
         const game = games[roomCode];
         console.log("attempting to join game with room code: " + roomCode)
         console.log("game found: " + game)
-        if (game) {
+        if (game && game.players.length < 2) {
             game.addPlayer(player);
             socket.join('game-' + roomCode);
             console.log(player.name + ' joined a room with code: ' + roomCode);
@@ -77,7 +84,24 @@ io.on('connection', (socket) => {
         } else {
             io.to(socket.id).emit('error', 'Room code not found!')
         }
+        sendGameDataToRoom(roomCode)
     })
+
+    socket.on('closeRoom', (roomCode) => {
+        if (games[roomCode] && games[roomCode].players.find(p => p.socketId === socket.id)) {
+            const player1 = games[roomCode].players[0];
+            const player2 = games[roomCode].players[1];
+            delete games[roomCode];
+            io.to('game-' + roomCode).emit('roomClosed');
+            if (player1) {
+                socket.leave('game-' + roomCode);
+            }
+            if (player2) {
+                socket.leave('game-' + roomCode);
+            }
+        };
+    })
+
 })
 
 function logConnectedPlayers() {
@@ -93,6 +117,18 @@ server.listen(PORT, '0.0.0.0', () => {
 
 function generateRoomCode6Digits() {
     return Math.floor(100000 + Math.random() * 900000);
+}
+
+function sendGameDataToRoom(roomCode) {
+    const game = games[roomCode];
+    const gameData = {
+        players: game.getPlayers(),
+        board: game.getBoard(),
+        state: game.getState(),
+        roomCode: roomCode
+}
+io.to('game-' + roomCode).emit('gameData', gameData);
+console.log("gamedata sent to: " + roomCode)
 }
 
 class Player {
@@ -127,5 +163,4 @@ class Game {
     setState(state) {
         this.state = state;
     }
-    
 }

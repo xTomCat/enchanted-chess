@@ -1,3 +1,5 @@
+//const { text } = require("express")
+
 let chessBoard = []
 let whiteTexture, blackTexture
 let mousePressedInBoard = false
@@ -5,6 +7,7 @@ let guiGraphics
 let gl
 let socket
 let nickname = "anonymous"
+let gameData = null
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -61,7 +64,34 @@ function setup() {
     console.log("Nickname changed to: " + changedNickname)
     nickname = changedNickname
   })
-    
+
+  socket.on('roomCreated', (roomCode) => {
+    room = roomCode
+    let roomCloseButton = createButton('Close room')
+    roomCloseButton.position(8, windowHeight-88)
+    roomCloseButton.mousePressed(closeRoom)
+
+  })
+
+  socket.on('roomClosed', () => {
+    room = null
+    console.log('Room closed')
+    gameData = null
+  })
+
+  socket.on('gameData', (gameDataRecieved) => { 
+    console.log("Game data received: " + gameDataRecieved)
+    gameData = gameDataRecieved
+  })
+}
+
+function closeRoom() {
+  if (gameData) {
+    socket.emit('closeRoom', gameData.roomCode)
+    roomCloseButton.remove()
+  } else {
+    console.log("No room to close")
+  }
 }
 
 function createRoom() {
@@ -69,10 +99,11 @@ function createRoom() {
 }
 
 function promptNickName() {
-  let nickname = prompt("Please enter your nickname")
+  const nickname = prompt("Please enter your nickname")
+  const roomCode = gameData ? gameData.roomCode : null
   console.log("Nickname: " + nickname)
   if (nickname) {
-    socket.emit('nickname', nickname)
+    socket.emit('nickname', nickname, roomCode)
   }
 }
 
@@ -123,6 +154,22 @@ function renderGUI() {
     textAlign(RIGHT)
     text("Name: " + nickname, windowWidth/16*0.85, (windowHeight/16)*0.85)
   pop()
+  if (gameData) {
+    const players = gameData.players
+    push()
+      fill(255)
+      textAlign(LEFT)
+      text("You're in a room! Code: " + gameData.roomCode, -(windowWidth/16)*0.9, (-windowHeight/16)*0.8)
+      if (players[0]) {
+        text("Player 1: " + players[0].name, -(windowWidth/16)*0.9, ((-windowHeight/16)*0.8)+10)
+      }
+      if (players[1]) {
+        text("Player 2: " + players[1].name, -(windowWidth/16)*0.9, ((-windowHeight/16)*0.8)+20)
+      } else{
+        text("Waiting for player 2...", -(windowWidth/16)*0.9, ((-windowHeight/16)*0.8)+20)
+      }
+    pop()
+  }
   push()
     
     //console.log(maxcamtilt, mincamtilt)
