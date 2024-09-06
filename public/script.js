@@ -4,6 +4,7 @@ let mousePressedInBoard = false
 let guiGraphics
 let gl
 let socket
+let nickname = "anonymous"
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -23,10 +24,13 @@ function setup() {
   let canvas = createCanvas(windowWidth-15, windowHeight-15, WEBGL)
   let joinRoomButton = createButton('Join a room')
   let nickNameButton = createButton('Choose your nickname')
+  let createARoomButton = createButton('Create a room')
   nickNameButton.position(8, windowHeight-48)
   nickNameButton.mousePressed(promptNickName)
   joinRoomButton.position(8, windowHeight-28)
   joinRoomButton.mousePressed(joinGameByRoomCode)
+  createARoomButton.position(8, windowHeight-68)
+  createARoomButton.mousePressed(createRoom)
   chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
   chessBoard.populateBoard()
   p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
@@ -52,7 +56,16 @@ function setup() {
     console.log("Move received: " + move)
     chessBoard.move(move)
   })
+
+  socket.on('nicknameChanged', (changedNickname) => {
+    console.log("Nickname changed to: " + changedNickname)
+    nickname = changedNickname
+  })
     
+}
+
+function createRoom() {
+  socket.emit('createRoom')
 }
 
 function promptNickName() {
@@ -86,8 +99,8 @@ function draw() {
 }
 
 function renderGUI() {
-  const maxcamtilt = -1.5
-  const mincamtilt = 1.5
+  const maxcamtilt = -1.4
+  const mincamtilt = 1.4
   let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX)
   let camtilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
   cam.eyeY = cam.centerY + dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ) * tan(camtilt);
@@ -104,6 +117,11 @@ function renderGUI() {
     rectMode(CENTER)
     fill(100)
     rect(0, (windowHeight/16)*0.85, windowWidth/16, windowHeight/48)
+  pop()
+  push()
+    fill(255)
+    textAlign(RIGHT)
+    text("Name: " + nickname, windowWidth/16*0.85, (windowHeight/16)*0.85)
   pop()
   push()
     
