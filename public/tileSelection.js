@@ -2,7 +2,9 @@ let rayStart;
 let rayEnd;
 
 function getSelectedTile(mouseX, mouseY, chessBoardObject) {
-  let chessBoard = chessBoardObject.getBoard();
+  console.log("BAD STUFF: " + chessBoardObject.getBoard())
+  console.log("GOOD STUFF: " + chessBoardObject)
+  const chessBoardArray = chessBoardObject.getBoard();
   let width = _renderer.width;
   let height = _renderer.height;
   // convert mouse coordinates to NDC
@@ -29,7 +31,7 @@ function getSelectedTile(mouseX, mouseY, chessBoardObject) {
   for (let x = 0; x < chessBoardObject.getWidth(); x++) {
     for (let y = 0; y < chessBoardObject.getHeight(); y++) {
       if (rayIntersectsTile(nearPoint, rayDir, chessBoardObject, x, y)) {
-        return worldToBoardIndices(chessBoard[x][y].x, chessBoard[x][y].z, chessBoardObject);
+        return worldToBoardIndices(chessBoardArray[x][y].x, chessBoardArray[x][y].z, chessBoardObject);
       }
     }
   }
@@ -39,8 +41,8 @@ function getSelectedTile(mouseX, mouseY, chessBoardObject) {
 
 function rayIntersectsTile(nearPoint, rayDir, chessBoardObject, x, y) {
   //Initialise relevant variables
-  let chessBoard = chessBoardObject.getBoard();
-  let tile = chessBoard[x][y];
+  let chessBoardArray = chessBoardObject.getBoard();
+  let tile = chessBoardArray[x][y];
   let tileSize = chessBoardObject.getTileSize();
   //Solve t for 0
   let t = -nearPoint[1] / rayDir[1];
