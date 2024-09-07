@@ -8,7 +8,6 @@ let gl
 let socket
 let nickname = "anonymous"
 let gameData = null
-let textures = []
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -35,11 +34,10 @@ function setup() {
   joinRoomButton.mousePressed(joinGameByRoomCode)
   createARoomButton.position(8, windowHeight-68)
   createARoomButton.mousePressed(createRoom)
-  textures = generateBoardTexturesArray(8, 8)
-  //chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
-  //chessBoard.populateBoard()
-  //p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
-  //chessBoardArray = chessBoard.getBoard()
+  chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
+  chessBoard.populateBoard()
+  p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
+  chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
   cam = createCamera()
   gl = this._renderer.GL;
@@ -87,37 +85,6 @@ function setup() {
   })
 }
 
-function generateBoardTexturesArray(height, width) {
-  let blackTextures = []
-  let whiteTextures = []
-  
-  for (let i = 0; i < height; i++) {
-    blackTextures.push([]);
-    whiteTextures.push([])
-    for (let j = 0; j < width; j++) {
-      
-      let resolution = tileSize * 5
-      let tileGraphic = createGraphics(resolution, resolution);
-      let sx, sy;
-      if ((i + j) % 2 === 0) {
-        sx = random(whiteTexture.width - resolution);
-        sy = random(whiteTexture.height - resolution);
-        tileGraphic.image(whiteTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-        whiteTextures.push(tileGraphic);
-      } else {
-        sx = random(blackTexture.width - resolution);
-        sy = random(blackTexture.height - resolution);
-        tileGraphic.image(blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-        blackTextures.push(tileGraphic);
-        
-      }
-      
-    }
-  }
-  return {blackTextures, whiteTextures}
-}
-
-
 function closeRoom() {
   if (gameData) {
     socket.emit('closeRoom', gameData.roomCode)
@@ -154,10 +121,7 @@ function draw() {
      orbitControl()
   }
   push()
-  if (gameData && gameData.board) {
-    const chessBoard = gameData.board
-    drawChessBoard(chessBoard)
-  }
+  drawChessBoard(chessBoard)
   pop()
   push()
   renderGUI()
@@ -248,13 +212,7 @@ function drawChessBoard(chessBoardObject) {
       translate(chessBoard[i][j].x, chessBoard[i][j].y, chessBoard[i][j].z);
       rotateX(PI/2)
       rotateZ(PI/2)
-      let tileTexture
-      if (chesBoard[i][j].type == "black") {
-        tileTexture = textures.blackTextures[i*j];
-      }
-      else {
-        tileTexture = textures.blackTextures[i*j]
-      }
+      let tileTexture = chessBoardObject.getTileTexture(i, j);
       //Render the tiles differently if they're selected or hovered
       if (chessBoard[i][j].selected == true) {
         fill(0,255,0)
