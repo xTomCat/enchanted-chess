@@ -96,8 +96,8 @@ class Chessboard {
     this.setTileData(0, 0, { piece: new ChessPiece("rook", "black") });
     this.setTileData(1, 0, { piece: new ChessPiece("knight", "black") });
     this.setTileData(2, 0, { piece: new ChessPiece("bishop", "black") });
-    this.setTileData(3, 0, { piece: new ChessPiece("queen", "black") });
-    this.setTileData(4, 0, { piece: new ChessPiece("king", "black") });
+    //this.setTileData(3, 0, { piece: new ChessPiece("queen", "black") });
+    //this.setTileData(4, 0, { piece: new ChessPiece("king", "black") });
     this.setTileData(5, 0, { piece: new ChessPiece("bishop", "black") });
     this.setTileData(6, 0, { piece: new ChessPiece("knight", "black") });
     this.setTileData(7, 0, { piece: new ChessPiece("rook", "black") });
@@ -108,8 +108,8 @@ class Chessboard {
     this.setTileData(0, this.height - 1, { piece: new ChessPiece("rook", "white") });
     this.setTileData(1, this.height - 1, { piece: new ChessPiece("knight", "white") });
     this.setTileData(2, this.height - 1, { piece: new ChessPiece("bishop", "white") });
-    this.setTileData(3, this.height - 1, { piece: new ChessPiece("queen", "white") });
-    this.setTileData(4, this.height - 1, { piece: new ChessPiece("king", "white") });
+    //this.setTileData(3, this.height - 1, { piece: new ChessPiece("queen", "white") });
+    //this.setTileData(4, this.height - 1, { piece: new ChessPiece("king", "white") });
     this.setTileData(5, this.height - 1, { piece: new ChessPiece("bishop", "white") });
     this.setTileData(6, this.height - 1, { piece: new ChessPiece("knight", "white") });
     this.setTileData(7, this.height - 1, { piece: new ChessPiece("rook", "white") });

@@ -1,6 +1,6 @@
 //const { text } = require("express")
 
-let chessBoard = []
+let chessBoard = null
 let whiteTexture, blackTexture
 let mousePressedInBoard = false
 let guiGraphics
@@ -34,10 +34,10 @@ function setup() {
   joinRoomButton.mousePressed(joinGameByRoomCode)
   createARoomButton.position(8, windowHeight-68)
   createARoomButton.mousePressed(createRoom)
-  chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
-  chessBoard.populateBoard()
+  //chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
+  //chessBoard.populateBoard()
   p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
-  chessBoardArray = chessBoard.getBoard()
+  //chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
   cam = createCamera()
   gl = this._renderer.GL;
@@ -46,9 +46,7 @@ function setup() {
   cam.eyeZ = 300
   cam.eyeX = 340
   cam.eyeY = -340
-  console.log(cam)
   guiGraphics = createGraphics(windowWidth-15, windowHeight-15)
-  console.log("W: " + windowWidth + ", H: " + windowHeight)
   textFont(inconsolata)
   textSize(5)
   textAlign(CENTER)
@@ -80,15 +78,54 @@ function setup() {
   })
 
   socket.on('gameData', (gameDataRecieved) => { 
-    console.log("Game data received: " + gameDataRecieved)
     gameData = gameDataRecieved
+    compareBoard(chessBoard, gameDataRecieved.board)
+    //board = gameDataRecieved.board
+    //for (let i = 0; i < board.length; i++) {
+    //  for (let j = 0; j < board[i].length; j++) {
+    //    if (board[i][j].piece) {
+    //      chessBoard.setTileData(i, j, {piece: new ChessPiece(board[i][j].piece.type, board[i][j].piece.color)})
+    //    }
+    //  }
+    //}
   })
+
+  socket.on('initBoard', (board) => {
+    chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
+    for (let i = 0; i < board.length; i++) {
+      for (let j = 0; j < board[i].length; j++) {
+        if (board[i][j].piece) {
+          chessBoard.setTileData(i, j, {piece: new ChessPiece(board[i][j].piece.type, board[i][j].piece.color)})
+        }
+      }
+    }
+    console.log("Created board on client!")
+    chessBoardArray = chessBoard.getBoard()
+  })
+}
+
+function compareBoard(chessBoard, board) {
+  for (let i = 0; i < board.length; i++) {
+    for (let j = 0; j < board[i].length; j++) {
+      if (board[i][j].piece) {
+        if (chessBoard.getTileData(i, j).piece) {
+          if (chessBoard.getTileData(i, j).piece.type !== board[i][j].piece.type || chessBoard.getTileData(i, j).piece.color !== board[i][j].piece.color) {
+            chessBoard.setTileData(i, j, {piece: new ChessPiece(board[i][j].piece.type, board[i][j].piece.color)})
+          }
+        } else {
+          chessBoard.setTileData(i, j, {piece: new ChessPiece(board[i][j].piece.type, board[i][j].piece.color)})
+        }
+      } else {
+        chessBoard.setTileData(i, j, {piece: null})
+      }
+    }
+  }
 }
 
 function closeRoom() {
   if (gameData) {
     socket.emit('closeRoom', gameData.roomCode)
-    roomCloseButton.remove()
+    chessBoard = null
   } else {
     console.log("No room to close")
   }
@@ -101,7 +138,6 @@ function createRoom() {
 function promptNickName() {
   const nickname = prompt("Please enter your nickname")
   const roomCode = gameData ? gameData.roomCode : null
-  console.log("Nickname: " + nickname)
   if (nickname) {
     socket.emit('nickname', nickname, roomCode)
   }
@@ -121,7 +157,9 @@ function draw() {
      orbitControl()
   }
   push()
-  drawChessBoard(chessBoard)
+  if (chessBoard) {
+    drawChessBoard(chessBoard)
+  }
   pop()
   push()
   renderGUI()
@@ -130,12 +168,11 @@ function draw() {
 }
 
 function renderGUI() {
-  const maxcamtilt = -1.4
-  const mincamtilt = 1.4
+  const maxcamtilt = -1.5
+  const mincamtilt = 1.5
   let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX)
   let camtilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
   cam.eyeY = cam.centerY + dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ) * tan(camtilt);
-  //console.log("Pan: " + pan + ", camtilt: " + camtilt)
   gl.disable(gl.CULL_FACE)
   translate(cam.eyeX, cam.eyeY, cam.eyeZ)
   rotateY(-pan)
@@ -190,6 +227,10 @@ function renderGUI() {
   //ellipse(windowWidth/16, windowHeight/16, 5)
   
 
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }
 
 function drawChessBoard(chessBoardObject) {
@@ -304,7 +345,6 @@ function keyPressed() {
 function selectTile(chessBoardObject, x, y) {
   let chessBoard = chessBoardObject.getBoard();
   let pieceMoved = false
-  console.log(chessBoardObject.getTileData(x, y))
   if (!chessBoard[x][y].selected) {
     for (let i = 0; i < chessBoardObject.getWidth(); i++) {
       for (let j = 0; j < chessBoardObject.getHeight(); j++) {
@@ -332,14 +372,15 @@ function selectTile(chessBoardObject, x, y) {
 }
 
 function mousePressed() {
+  if (chessBoard) {
   let hoveredTile = getSelectedTile(mouseX, mouseY, chessBoard)
-  console.log("X: " + mouseX + " Y" + mouseY)
   if (hoveredTile) {
     mousePressedInBoard = true
     selectTile(chessBoard, hoveredTile.x, hoveredTile.y)
   } else{
     mousePressedInBoard = false
   }
+}
 }
 
 function mouseReleased() {
