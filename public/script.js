@@ -1,6 +1,6 @@
 //const { text } = require("express")
 
-let chessBoard = null
+let chessBoard = []
 let whiteTexture, blackTexture
 let mousePressedInBoard = false
 let guiGraphics
@@ -35,8 +35,7 @@ function setup() {
   joinRoomButton.mousePressed(joinGameByRoomCode)
   createARoomButton.position(8, windowHeight-68)
   createARoomButton.mousePressed(createRoom)
-  blackTextures = generateBoardTexturesArray(8, 8, "black")
-  whiteTextures = generateBoardTexturesArray(8, 8, "white")
+  textures = generateBoardTexturesArray(8, 8)
   //chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
   //chessBoard.populateBoard()
   //p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
@@ -85,40 +84,37 @@ function setup() {
   socket.on('gameData', (gameDataRecieved) => { 
     console.log("Game data received: " + gameDataRecieved)
     gameData = gameDataRecieved
-    let board = gameData.board.chessBoard
-    console.log(board)
-    chessBoard = new Chessboard(board, gameData.board.tileSize, gameData.board.width, gameData.board.height)
-    console.log('Client chessboard:' + chessBoard)
   })
 }
 
-function generateBoardTexturesArray(height, width, type) {
-  let textures = []
-  let tileSize = 20
+function generateBoardTexturesArray(height, width) {
+  let blackTextures = []
+  let whiteTextures = []
   
   for (let i = 0; i < height; i++) {
-    textures.push([]);
+    blackTextures.push([]);
+    whiteTextures.push([])
     for (let j = 0; j < width; j++) {
       
       let resolution = tileSize * 5
       let tileGraphic = createGraphics(resolution, resolution);
       let sx, sy;
-      if (type == "white") {
+      if ((i + j) % 2 === 0) {
         sx = random(whiteTexture.width - resolution);
         sy = random(whiteTexture.height - resolution);
         tileGraphic.image(whiteTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-        textures.push(tileGraphic);
+        whiteTextures.push(tileGraphic);
       } else {
         sx = random(blackTexture.width - resolution);
         sy = random(blackTexture.height - resolution);
         tileGraphic.image(blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-        textures.push(tileGraphic);
+        blackTextures.push(tileGraphic);
         
       }
       
     }
   }
-  return textures
+  return {blackTextures, whiteTextures}
 }
 
 
@@ -158,7 +154,8 @@ function draw() {
      orbitControl()
   }
   push()
-  if (chessBoard != null) {
+  if (gameData && gameData.board) {
+    const chessBoard = gameData.board
     drawChessBoard(chessBoard)
   }
   pop()
@@ -233,40 +230,37 @@ function renderGUI() {
 
 function drawChessBoard(chessBoardObject) {
   gl.cullFace(gl.FRONT)
-  let chessBoardArray = chessBoardObject.getBoard();
+  let chessBoard = chessBoardObject.getBoard();
   let tileSize = chessBoardObject.getTileSize();
   let boardHeight = chessBoardObject.getHeight();
   let boardWidth = chessBoardObject.getWidth();
   //Get the hovered tile
-  let hoveredTile
-  if (chessBoardObject.getBoard()) {
-    hoveredTile = getSelectedTile(mouseX, mouseY, chessBoardObject)
-  }
+  let hoveredTile = getSelectedTile(mouseX, mouseY, chessBoardObject)
   for (let i = 0; i < boardWidth; i++) {
     for (let j = 0; j < boardHeight; j++) {
       push();
       //If the hovered tile isn't null, set that tile to be hovered with JSON data.
       if (hoveredTile) {
       if (i == hoveredTile.x && j == hoveredTile.y) {
-        chessBoardArray[i][j].hovered = true
-      } else {chessBoardArray[i][j].hovered = false}
-      } else {chessBoardArray[i][j].hovered = false}
-      translate(chessBoardArray[i][j].x, chessBoardArray[i][j].y, chessBoardArray[i][j].z);
+        chessBoard[i][j].hovered = true
+      } else {chessBoard[i][j].hovered = false}
+      } else {chessBoard[i][j].hovered = false}
+      translate(chessBoard[i][j].x, chessBoard[i][j].y, chessBoard[i][j].z);
       rotateX(PI/2)
       rotateZ(PI/2)
       let tileTexture
-      if (chessBoardArray[i][j].type == "black") {
+      if (chesBoard[i][j].type == "black") {
         tileTexture = textures.blackTextures[i*j];
       }
       else {
         tileTexture = textures.blackTextures[i*j]
       }
       //Render the tiles differently if they're selected or hovered
-      if (chessBoardArray[i][j].selected == true) {
+      if (chessBoard[i][j].selected == true) {
         fill(0,255,0)
         noStroke()
       }
-      else if (chessBoardArray[i][j].hovered == true) {
+      else if (chessBoard[i][j].hovered == true) {
         fill(255,0,0)
         noStroke()
       } 
@@ -274,8 +268,8 @@ function drawChessBoard(chessBoardObject) {
         stroke(0,0,0)
         texture(tileTexture);
       }
-      if (chessBoardArray[i][j].piece) {
-        chessBoardArray[i][j].piece.drawModel()
+      if (chessBoard[i][j].piece) {
+        chessBoard[i][j].piece.drawModel()
       }
       
       
@@ -288,16 +282,16 @@ function drawChessBoard(chessBoardObject) {
       rotateX(PI)
       square(0, 0, tileSize)
       
-      //Draw the sides for the top of the chessBoardArray
-      if (i == 0 && (chessBoardArray[i][j].type == "black" || chessBoardArray[i][j].type == "white")) {
+      //Draw the sides for the top of the chessboard
+      if (i == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
         push()
         translate(-tileSize/2, 0, -tileSize/4)
         rotateX(PI/2)
         rotateY(PI*1.5)
         rect(0,0, tileSize, tileSize/2)
         pop()
-      //Draw the sides for the bottom of the chessBoardArray
-      } else if (i == boardWidth-1 && (chessBoardArray[i][j].type == "black" || chessBoardArray[i][j].type == "white")) {
+      //Draw the sides for the bottom of the chessboard
+      } else if (i == boardWidth-1 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
         push()
         translate(tileSize/2, 0, -tileSize/4)
         rotateX(PI*1.5)
@@ -305,16 +299,16 @@ function drawChessBoard(chessBoardObject) {
         rect(0,0, tileSize, tileSize/2)
         pop()
       }
-      //Draw the sides for the left side of the chessBoardArray
-      if (j == 0 && (chessBoardArray[i][j].type == "black" || chessBoardArray[i][j].type == "white")) {
+      //Draw the sides for the left side of the chessboard
+      if (j == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
         push()
         translate(0, -tileSize/2, -tileSize/4)
         rotateX(PI*1.5)
         rotateY(PI)
         rect(0,0, tileSize, tileSize/2)
         pop()
-        //Draw the sides for the right side of the chessBoardArray
-      } else if (j == boardHeight-1 && (chessBoardArray[i][j].type == "black" || chessBoardArray[i][j].type == "white")) {
+        //Draw the sides for the right side of the chessboard
+      } else if (j == boardHeight-1 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
         push()
         translate(0, tileSize/2, -tileSize/4)
         rotateX(PI*1.5)
