@@ -8,6 +8,9 @@ let gl
 let socket
 let nickname = "anonymous"
 let gameData = null
+let uiBuffer;
+let mouseClickedLoc
+let availableMoves = null
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -50,6 +53,7 @@ function setup() {
   textFont(inconsolata)
   textSize(5)
   textAlign(CENTER)
+  uiBuffer = createGraphics(windowWidth-15, windowHeight-15)
 
   
 
@@ -151,10 +155,11 @@ function joinGameByRoomCode() {
 }
 
 function draw() {
+  
   background(50)
   cam.lookAt(0,0,0)
   if(!mousePressedInBoard){
-     orbitControl()
+    orbitControl()
   }
   push()
   if (chessBoard) {
@@ -164,7 +169,6 @@ function draw() {
   push()
   renderGUI()
   pop()
-  
 }
 
 function renderGUI() {
@@ -190,6 +194,9 @@ function renderGUI() {
     fill(255)
     textAlign(RIGHT)
     text("Name: " + nickname, windowWidth/16*0.85, (windowHeight/16)*0.85)
+    if (mouseClickedLoc) {
+    ellipse(mouseClickedLoc.x, mouseClickedLoc.y, 5)
+    }
   pop()
   if (gameData) {
     const players = gameData.players
@@ -205,6 +212,7 @@ function renderGUI() {
       } else{
         text("Waiting for player 2...", -(windowWidth/16)*0.9, ((-windowHeight/16)*0.8)+20)
       }
+      
     pop()
   }
   push()
@@ -229,6 +237,8 @@ function renderGUI() {
 
 }
 
+
+
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
@@ -247,7 +257,14 @@ function drawChessBoard(chessBoardObject) {
       //If the hovered tile isn't null, set that tile to be hovered with JSON data.
       if (hoveredTile) {
       if (i == hoveredTile.x && j == hoveredTile.y) {
-        chessBoard[i][j].hovered = true
+        //If a move is available, only the available moves can be hovered.
+        if (availableMoves) {
+          if (availableMoves.some(move => move.x === i && move.y === j) || chessBoard[i][j].selected) {
+            chessBoard[i][j].hovered = true;
+          }
+        } else {
+          chessBoard[i][j].hovered = true;
+        }
       } else {chessBoard[i][j].hovered = false}
       } else {chessBoard[i][j].hovered = false}
       translate(chessBoard[i][j].x, chessBoard[i][j].y, chessBoard[i][j].z);
@@ -257,16 +274,20 @@ function drawChessBoard(chessBoardObject) {
       //Render the tiles differently if they're selected or hovered
       if (chessBoard[i][j].selected == true) {
         fill(0,255,0)
-        noStroke()
+        //noStroke()
       }
-      else if (chessBoard[i][j].hovered == true) {
-        fill(255,0,0)
-        noStroke()
+      else if (chessBoard[i][j].available == true) {
+        fill(0,0,255)
+        //noStroke()
       } 
       else {
         stroke(0,0,0)
         texture(tileTexture);
       }
+      if (chessBoard[i][j].hovered == true) {
+        fill(255,0,0)
+        //noStroke()
+      } 
       if (chessBoard[i][j].piece) {
         chessBoard[i][j].piece.drawModel()
       }
@@ -344,30 +365,67 @@ function keyPressed() {
 
 function selectTile(chessBoardObject, x, y) {
   let chessBoard = chessBoardObject.getBoard();
-  let pieceMoved = false
+  let pieceMoved = false;
+  availableMoves = null;
+
+  if (gameData == null) {
+    return;
+  }
+
   if (!chessBoard[x][y].selected) {
     for (let i = 0; i < chessBoardObject.getWidth(); i++) {
       for (let j = 0; j < chessBoardObject.getHeight(); j++) {
-        
         if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor())) {
-          move = {
-            from: {x: i, y: j},
-            to: {x: x, y: y}
+          if (chessBoard[x][y].available) {
+            const move = {
+              from: { x: i, y: j },
+              to: { x: x, y: y }
+            };
+            chessBoardObject.move(move);
+            socket.emit('move', move);
+            pieceMoved = true;
           }
-          chessBoardObject.move(move)
-          socket.emit('move', move)
-          pieceMoved = true
         }
-        chessBoard[i][j].selected = false
-  if (pieceMoved) {
-    chessBoard[x][y].selected = false
-  } else {
-    chessBoard[x][y].selected = true
-  }
+        chessBoard[i][j].selected = false;
+      }
+    }
 
-      }}
+    if (pieceMoved) {
+      chessBoard[x][y].selected = false;
+      resetAvailableMoves(chessBoardObject);
+    } else {
+      if (gameData.co)
+      chessBoard[x][y].selected = true;
+      resetAvailableMoves(chessBoardObject);
+
+      if (chessBoard[x][y].piece) {
+        availableMoves = chessBoardObject.getTileData(x, y).piece.getAvailableMoves(chessBoardObject, x, y);
+      }
+
+      if (availableMoves != null) {
+        markAvailableMoves(chessBoard, availableMoves);
+      }
+    }
   } else {
-    chessBoard[x][y].selected = false
+    chessBoard[x][y].selected = false;
+    resetAvailableMoves(chessBoardObject);
+  }
+}
+
+// Function to reset available moves for all tiles
+function resetAvailableMoves(chessBoardObject) {
+  let chessBoard = chessBoardObject.getBoard();
+  for (let i = 0; i < chessBoardObject.getWidth(); i++) {
+    for (let j = 0; j < chessBoardObject.getHeight(); j++) {
+      chessBoard[i][j].available = false;
+    }
+  }
+}
+
+// Function to mark available moves on the chessboard
+function markAvailableMoves(chessBoard, moves) {
+  for (let i = 0; i < moves.length; i++) {
+    chessBoard[moves[i].x][moves[i].y].available = true;
   }
 }
 
@@ -381,10 +439,19 @@ function mousePressed() {
     mousePressedInBoard = false
   }
 }
+mouseClickedLoc = mouseToHUDCoords(mouseX, mouseY)
+console.log(mouseClickedLoc)
 }
 
 function mouseReleased() {
   mousePressedInBoard = false
+}
+
+function mouseToHUDCoords(mouseX, mouseY) {
+  // Convert mouse coordinates (top-left origin) to HUD coordinates (center origin)
+  let hudX = (mouseX - windowWidth / 2)/8;
+  let hudY = (mouseY - windowHeight / 2)/8;
+  return { x: hudX, y: hudY };
 }
 
 

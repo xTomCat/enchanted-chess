@@ -151,13 +151,13 @@ class Player {
       this.name = name;
       this.ip = ip;
       this.UUID = uuidv4();
-      this.socketId = socketId
+      this.socketId = socketId;
     }
   }
 
 class Game {
   constructor(roomCode) {
-    this.players = [];
+    this.players = []; //0: white, 1: black
     this.state = "waiting";
     this.roomCode = roomCode
     this.chessBoard = []
