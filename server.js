@@ -92,6 +92,7 @@ io.on('connection', (socket) => {
             setPlayerColor(player, "black")
             makePlayerGenerateBoard(player, game.getBoard())
             sendGameDataToRoom(roomCode)
+            game.start()
         } else {
             io.to(socket.id).emit('error', 'Room code not found!')
         
@@ -237,7 +238,9 @@ class Game {
       let from = move.from;
       let to = move.to;
       let piece = this.getTileData(from.x, from.y).piece;
+      console.log("from: " + from.x + ", " + from.y)
       let availableMoves = piece.getAvailableMoves(this, from.x, from.y);
+      console.log("availableMoves: " + availableMoves)
 
       if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {
         this.setTileData(to.x, to.y, { piece: piece });
@@ -284,6 +287,10 @@ class Game {
         this.setTileData(6, this.height - 1, { piece: new ChessPiece("knight", "white") });
         this.setTileData(7, this.height - 1, { piece: new ChessPiece("rook", "white") });
       }
+      start() {
+        this.state = "started";
+        sendGameDataToRoom(this.roomCode)
+      }
 }
 
 class ChessPiece {
@@ -327,7 +334,8 @@ class ChessPiece {
     
       getPawnMoves(Game, x, y) {
         let chessBoard = Game.getBoard();
-        console.log("chessboard tile 0,0:" + chessBoard[0][0].piece.color)
+        //console.log("chessboard tile 0,0:" + chessBoard[3][3].piece.color)
+        //console.log("chessboard tile error:" + chessBoard[4][5].piece.color)
         let chessPiece = chessBoard[x][y].piece;
         let moves = [];
         let direction = chessPiece.color === "white" ? -1 : 1;
@@ -336,36 +344,39 @@ class ChessPiece {
         let forwardTwo = { x: x, y: y + 2 * direction }
         let leftCapture = { x: x - 1, y: y + direction }
         let rightCapture = { x: x + 1, y: y + direction }
-        console.log("Forward one: " + forwardOne.x + ", " + forwardOne.y)
-        console.log("Forward one tile: " + chessBoard[forwardOne.x][forwardOne.y].piece)
+        //console.log("rightCapture: " + rightCapture.x + ", " + rightCapture.y)
+        //console.log("leftCapture: " + leftCapture.x + ", " + leftCapture.y)
+        //console.log("Forward one: " + forwardOne.x + ", " + forwardOne.y)
+        //console.log("Forward one tile: " + chessBoard[forwardOne.x][forwardOne.y].piece)
         if (forwardOne.x >= 0 && forwardOne.x < Game.getWidth() && forwardOne.y >= 0 && forwardOne.y < Game.getHeight()) {
-          if (chessBoard[forwardOne.x][forwardOne.y].piece === null) {
+          console.log("a")
+          if (!chessBoard[forwardOne.x][forwardOne.y].piece) {
+            console.log("b")
             moves.push(forwardOne)
             if (!(forwardTwo.x >= 0 && forwardTwo.x < Game.getWidth() && forwardTwo.y >= 0 && forwardTwo.y < Game.getHeight())) {
               return;
             }
-            if (chessBoard[forwardTwo.x][forwardTwo.y].piece === null && (chessPiece.color === "white" && y === 6) || (chessPiece.color === "black" && y === 1)) {
+            if (!chessBoard[forwardTwo.x][forwardTwo.y].piece && (chessPiece.color === "white" && y === 6) || (chessPiece.color === "black" && y === 1)) {
               moves.push(forwardTwo)
             }
           }
           if (leftCapture.x >= 0 && leftCapture.x < Game.getWidth() && leftCapture.y >= 0 && leftCapture.y < Game.getHeight()) {
-            if (chessBoard[leftCapture.x][leftCapture.y].piece !== null) {
-              console.log("hi!")
-              console.log("Piece: " + chessBoard[leftCapture.x][leftCapture.y].piece)
-              console.log("Piece color: " + chessBoard[leftCapture.x][leftCapture.y].piece.color)
+            if (chessBoard[leftCapture.x][leftCapture.y].piece) {
+              //console.log("hi!")
               if (chessBoard[leftCapture.x][leftCapture.y].piece.color !== chessPiece.color) {
                 moves.push(leftCapture)
               }
             }
           }
           if (rightCapture.x >= 0 && rightCapture.x < Game.getWidth() && rightCapture.y >= 0 && rightCapture.y < Game.getHeight()) {
-            if (chessBoard[rightCapture.x][rightCapture.y].piece !== null) {
+            if (chessBoard[rightCapture.x][rightCapture.y].piece) {
               if (chessBoard[rightCapture.x][rightCapture.y].piece.color !== chessPiece.color) {
                 moves.push(rightCapture)
             }
           }
           }
         }
+        console.log("Pawn moves: " + moves)
         return moves
       }
     
@@ -385,7 +396,7 @@ class ChessPiece {
           let newX = x + dx
           let newY = y + dy
           while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (chessBoard[newX][newY].piece === null) {
+            if (!chessBoard[newX][newY].piece) {
               moves.push({ x: newX, y: newY })
             } else {
               if (chessBoard[newX][newY].piece.color !== piece.color) {
@@ -419,7 +430,7 @@ class ChessPiece {
           let newX = x + targets[i].x
           let newY = y + targets[i].y
           if (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (chessBoard[newX][newY].piece === (null) || chessBoard[newX][newY].piece.color !== piece.color) {
+            if (!chessBoard[newX][newY].piece || chessBoard[newX][newY].piece.color !== piece.color) {
               moves.push({ x: newX, y: newY })
             }
           }
@@ -443,7 +454,7 @@ class ChessPiece {
           let newX = x + dx
           let newY = y + dy
           while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (chessBoard[newX][newY].piece === null) {
+            if (!chessBoard[newX][newY].piece) {
               moves.push({ x: newX, y: newY })
             } else {
               if (chessBoard[newX][newY].piece.color !== piece.color) {
@@ -478,7 +489,7 @@ class ChessPiece {
           let newX = x + dx
           let newY = y + dy
           while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (chessBoard[newX][newY].piece === null) {
+            if (!chessBoard[newX][newY].piece) {
               moves.push({ x: newX, y: newY })
             } else {
               if (chessBoard[newX][newY].piece.color !== piece.color) {
@@ -513,7 +524,7 @@ class ChessPiece {
           let newX = x + dx
           let newY = y + dy
           if (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (chessBoard[newX][newY].piece === null || chessBoard[newX][newY].piece.color !== piece.color) {
+            if (!chessBoard[newX][newY].piece || chessBoard[newX][newY].piece.color !== piece.color) {
               moves.push({ x: newX, y: newY })
             }
           }

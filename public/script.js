@@ -86,6 +86,7 @@ function setup() {
 
   socket.on('gameData', (gameDataRecieved) => { 
     gameData = gameDataRecieved
+    console.log("State: " + gameDataRecieved.state)
     compareBoard(chessBoard, gameDataRecieved.board)
     //board = gameDataRecieved.board
     //for (let i = 0; i < board.length; i++) {
@@ -232,10 +233,14 @@ function renderGUI() {
     fill(255)
     textAlign(CENTER)
     if (gameData) {
-      if (gameData.turn == color) {
-        text("It's your turn!", 0, (windowHeight/16)*0.5)
-      } else if (gameData.turn != color) {
-        text("It's the other player's turn!", 0, (windowHeight/16)*0.5)
+      if (gameData.state == "waiting") {
+        text("Waiting for players...", 0, (windowHeight/16)*0.5)
+      } else if (gameData.state == "started") {
+        if (gameData.turn == color) {
+          text("It's your turn!", 0, (windowHeight/16)*0.5)
+        } else if (gameData.turn != color) {
+          text("It's the other player's turn!", 0, (windowHeight/16)*0.5)
+        }
       }
   }
   pop()
