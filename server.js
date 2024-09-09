@@ -212,6 +212,12 @@ class Game {
     setState(state) {
         this.state = state;
     }
+    getWidth() {
+      return this.width
+    }
+    getHeight() {
+      return this.height
+    }
     setTileData(x, y, data) {
       if (y >= 0 && y < this.width && x >= 0 && x < this.height) {
         this.chessBoard[x][y] = { ...this.chessBoard[x][y], ...data };
@@ -231,12 +237,25 @@ class Game {
       let from = move.from;
       let to = move.to;
       let piece = this.getTileData(from.x, from.y).piece;
-      this.setTileData(to.x, to.y, { piece: piece });
-      this.setTileData(from.x, from.y, { piece: null });
-      if (this.turn === "white") {
-        this.turn = "black";
-      } else {
-        this.turn = "white";
+      let availableMoves = piece.getAvailableMoves(this, from.x, from.y);
+
+      if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {
+        this.setTileData(to.x, to.y, { piece: piece });
+        this.setTileData(from.x, from.y, { piece: null });
+        if (this.turn === "white") {
+          this.turn = "black";
+        } else {
+          this.turn = "white";
+        }
+      }
+      else {
+        let player
+        if (this.turn === "white") {
+          player = this.players[0]
+        } else {
+          player = this.players[1]
+        }
+        console.log("Player ''" + player + "'' tried to make an invalid move!");
       }
     }
     populateBoard() {
@@ -279,6 +298,221 @@ class ChessPiece {
       getColor() {
         return this.color;
       }
-  
+      getAvailableMoves(Game, x, y) {
+        let chessBoard = Game.getBoard();
+        let piece = chessBoard[x][y].piece;
+        let moves = [];
+        switch (piece.type) {
+          case "pawn":
+            moves = this.getPawnMoves(Game, x, y);
+            break;
+          case "rook":
+            moves = this.getRookMoves(Game, x, y);
+            break;
+          case "knight":
+            moves = this.getKnightMoves(Game, x, y);
+            break;
+          case "bishop":
+            moves = this.getBishopMoves(Game, x, y);
+            break;
+          case "queen":
+            moves = this.getQueenMoves(Game, x, y);
+            break;
+          case "king":
+            moves = this.getKingMoves(Game, x, y);
+            break;
+        }
+        return moves;
+      }
+    
+      getPawnMoves(Game, x, y) {
+        let chessBoard = Game.getBoard();
+        let piece = chessBoard[x][y].piece;
+        let moves = [];
+        let direction = piece.color === "white" ? -1 : 1;
+        console.log("Direction: " + direction)
+        let forwardOne = { x: x, y: y + direction }
+        let forwardTwo = { x: x, y: y + 2 * direction }
+        let leftCapture = { x: x - 1, y: y + direction }
+        let rightCapture = { x: x + 1, y: y + direction }
+        if (forwardOne.x >= 0 && forwardOne.x < Game.getWidth() && forwardOne.y >= 0 && forwardOne.y < Game.getHeight()) {
+          if (chessBoard[forwardOne.x][forwardOne.y].piece === null) {
+            moves.push(forwardOne)
+            if (!(forwardTwo.x >= 0 && forwardTwo.x < Game.getWidth() && forwardTwo.y >= 0 && forwardTwo.y < Game.getHeight())) {
+              return;
+            }
+            if (chessBoard[forwardTwo.x][forwardTwo.y].piece === null && (piece.color === "white" && y === 6) || (piece.color === "black" && y === 1)) {
+              moves.push(forwardTwo)
+            }
+          }
+          if (leftCapture.x >= 0 && leftCapture.x < Game.getWidth() && leftCapture.y >= 0 && leftCapture.y < Game.getHeight()) {
+            if (chessBoard[leftCapture.x][leftCapture.y].piece !== null) {
+              if (chessBoard[leftCapture.x][leftCapture.y].piece.color !== piece.color) {
+                moves.push(leftCapture)
+              }
+            }
+          }
+          if (rightCapture.x >= 0 && rightCapture.x < Game.getWidth() && rightCapture.y >= 0 && rightCapture.y < Game.getHeight()) {
+            if (chessBoard[rightCapture.x][rightCapture.y].piece !== null) {
+              if (chessBoard[rightCapture.x][rightCapture.y].piece.color !== piece.color) {
+                moves.push(rightCapture)
+            }
+          }
+          }
+        }
+        return moves
+      }
+    
+      getRookMoves(Game, x, y) {
+        let chessBoard = Game.getBoard();
+        let piece = chessBoard[x][y].piece;
+        let moves = [];
+        let directions = [
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 }
+        ]
+        for (let i = 0; i < directions.length; i++) {
+          let dx = directions[i].x
+          let dy = directions[i].y
+          let newX = x + dx
+          let newY = y + dy
+          while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
+            if (chessBoard[newX][newY].piece === null) {
+              moves.push({ x: newX, y: newY })
+            } else {
+              if (chessBoard[newX][newY].piece.color !== piece.color) {
+                moves.push({ x: newX, y: newY })
+              }
+              break
+            }
+            newX += dx
+            newY += dy
+          }
+        }
+        return moves
+      }
+    
+      getKnightMoves(Game, x, y) {
+        let chessBoard = Game.getBoard()
+        let piece = chessBoard[x][y].piece
+        let moves = []
+        let targets = [
+          { x: -1, y: 2 },
+          { x: 1, y: 2 },
+          { x: 2, y: 1 },
+          { x: 2, y: -1 },
+          { x: -2, y: 1 },
+          { x: -2, y: -1 },
+          { x: -1, y: -2 },
+          { x: 1, y: -2 }
+        ]
+    
+        for (let i = 0; i < targets.length; i++) {
+          let newX = x + targets[i].x
+          let newY = y + targets[i].y
+          if (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
+            if (chessBoard[newX][newY].piece === (null) || chessBoard[newX][newY].piece.color !== piece.color) {
+              moves.push({ x: newX, y: newY })
+            }
+          }
+        }
+        return moves
+      }
+    
+      getBishopMoves(Game, x, y) {
+        let chessBoard = Game.getBoard()
+        let piece = chessBoard[x][y].piece
+        let moves = []
+        let directions = [
+          { x: 1, y: 1 },
+          { x: 1, y: -1 },
+          { x: -1, y: 1 },
+          { x: -1, y: -1 }
+        ]
+        for (let i = 0; i < directions.length; i++) {
+          let dx = directions[i].x
+          let dy = directions[i].y
+          let newX = x + dx
+          let newY = y + dy
+          while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
+            if (chessBoard[newX][newY].piece === null) {
+              moves.push({ x: newX, y: newY })
+            } else {
+              if (chessBoard[newX][newY].piece.color !== piece.color) {
+                moves.push({ x: newX, y: newY })
+              }
+              break
+            }
+            newX += dx
+            newY += dy
+          }
+        }
+        return moves
+    }
+    
+      getQueenMoves(Game, x, y) {
+        let chessBoard = Game.getBoard()
+        let piece = chessBoard[x][y].piece
+        let moves = []
+        let directions = [ 
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 },
+          { x: 1, y: 1 },
+          { x: 1, y: -1 },
+          { x: -1, y: 1 },
+          { x: -1, y: -1 }
+        ]
+        for (let i = 0; i < directions.length; i++) {
+          let dx = directions[i].x
+          let dy = directions[i].y
+          let newX = x + dx
+          let newY = y + dy
+          while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
+            if (chessBoard[newX][newY].piece === null) {
+              moves.push({ x: newX, y: newY })
+            } else {
+              if (chessBoard[newX][newY].piece.color !== piece.color) {
+                moves.push({ x: newX, y: newY })
+              }
+              break
+            }
+            newX += dx
+            newY += dy
+          }
+        }
+        return moves
+      }
+    
+      getKingMoves(Game, x, y) {
+        let chessBoard = Game.getBoard()
+        let piece = chessBoard[x][y].piece
+        let moves = []
+        let directions = [
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 },
+          { x: 1, y: 1 },
+          { x: 1, y: -1 },
+          { x: -1, y: 1 },
+          { x: -1, y: -1 }
+        ]
+        for (let i = 0; i < directions.length; i++) {
+          let dx = directions[i].x
+          let dy = directions[i].y
+          let newX = x + dx
+          let newY = y + dy
+          if (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
+            if (chessBoard[newX][newY].piece === null || chessBoard[newX][newY].piece.color !== piece.color) {
+              moves.push({ x: newX, y: newY })
+            }
+          }
+        }
+        return moves
+      }
     }
   
