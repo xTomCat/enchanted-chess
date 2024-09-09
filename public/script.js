@@ -11,6 +11,7 @@ let gameData = null
 let uiBuffer;
 let mouseClickedLoc
 let availableMoves = null
+let color = "unset!"
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -69,6 +70,7 @@ function setup() {
 
   socket.on('roomCreated', (roomCode) => {
     room = roomCode
+    color = "black"
     let roomCloseButton = createButton('Close room')
     roomCloseButton.position(8, windowHeight-88)
     roomCloseButton.mousePressed(closeRoom)
@@ -105,6 +107,10 @@ function setup() {
     }
     console.log("Created board on client!")
     chessBoardArray = chessBoard.getBoard()
+  })
+
+  socket.on('setColor', (color) => {
+    color = color
   })
 }
 
@@ -155,7 +161,6 @@ function joinGameByRoomCode() {
 }
 
 function draw() {
-  
   background(50)
   cam.lookAt(0,0,0)
   if(!mousePressedInBoard){
@@ -192,11 +197,10 @@ function renderGUI() {
   pop()
   push()
     fill(255)
-    textAlign(RIGHT)
-    text("Name: " + nickname, windowWidth/16*0.85, (windowHeight/16)*0.85)
-    if (mouseClickedLoc) {
-    ellipse(mouseClickedLoc.x, mouseClickedLoc.y, 5)
-    }
+    textAlign(LEFT)
+    stroke(0)
+    text("Name: " + nickname + "\nColor: " + color, (windowWidth/16)*0.52, (windowHeight/16)*0.80)
+    noStroke()
   pop()
   if (gameData) {
     const players = gameData.players
@@ -394,7 +398,6 @@ function selectTile(chessBoardObject, x, y) {
       chessBoard[x][y].selected = false;
       resetAvailableMoves(chessBoardObject);
     } else {
-      if (gameData.co)
       chessBoard[x][y].selected = true;
       resetAvailableMoves(chessBoardObject);
 
@@ -440,7 +443,7 @@ function mousePressed() {
   }
 }
 mouseClickedLoc = mouseToHUDCoords(mouseX, mouseY)
-console.log(mouseClickedLoc)
+//console.log(mouseClickedLoc)
 }
 
 function mouseReleased() {

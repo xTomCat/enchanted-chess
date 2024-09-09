@@ -60,7 +60,7 @@ io.on('connection', (socket) => {
             console.log(oldName + ' changed changed their nickname to ' + nickname + "!");
             logConnectedPlayers()
             if (roomCode && games[roomCode]) {
-                    sendGameDataToRoom(roomCode)
+              sendGameDataToRoom(roomCode)
                 
         }
         }
@@ -77,7 +77,8 @@ io.on('connection', (socket) => {
         game.addPlayer(player);
         console.log(player.name + ' created a room with code: ' + roomCode);
         io.to(socket.id).emit('roomCreated', roomCode, player.name);
-        makeClientGenerateBoard(player, game.getBoard())
+        setPlayerColor(player, "white")
+        makePlayerGenerateBoard(player, game.getBoard())
         sendGameDataToRoom(roomCode)
     });
 
@@ -88,7 +89,8 @@ io.on('connection', (socket) => {
             game.addPlayer(player);
             socket.join('game-' + roomCode);
             console.log(player.name + ' joined a room with code: ' + roomCode);
-            makeClientGenerateBoard(player, game.getBoard())
+            setPlayerColor(player, "white")
+            makePlayerGenerateBoard(player, game.getBoard())
             sendGameDataToRoom(roomCode)
         } else {
             io.to(socket.id).emit('error', 'Room code not found!')
@@ -141,9 +143,14 @@ function sendGameDataToRoom(roomCode) {
 io.to('game-' + roomCode).emit('gameData', gameData);
 }
 
-function makeClientGenerateBoard(player, board) {
+function makePlayerGenerateBoard(player, board) {
     io.to(player.socketId).emit('initBoard', board);
     console.log("Asked player to generate client-side board: " + player.name);
+}
+
+function setPlayerColor(player, color) {
+    io.to(player.socketId).emit('setColor', color);
+    console.log("Asked player to set color: " + player.name);
 }
 
 class Player {
