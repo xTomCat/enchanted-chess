@@ -144,7 +144,9 @@ function sendGameDataToRoom(roomCode) {
         players: game.getPlayers(),
         board: game.getBoard(),
         state: game.getState(),
+        turn: game.getTurn(),
         roomCode: roomCode
+        
 }
 io.to('game-' + roomCode).emit('gameData', gameData);
 }
@@ -178,6 +180,7 @@ class Game {
     this.chessBoard = []
     this.width = 8;
     this.height = 8;
+    this.turn = "white";
     for (let i = 0; i < 8; i++) {
         this.chessBoard.push([]);
         for (let j = 0; j < 8; j++) {
@@ -194,6 +197,9 @@ class Game {
     //socket.emit('askToJoin', player.name);
     //io.to(player.socketId).emit('askToJoin', player.name);
   }
+    getTurn() {
+      return this.turn
+    }
     getPlayers() {
         return this.players;
     }
@@ -227,6 +233,11 @@ class Game {
       let piece = this.getTileData(from.x, from.y).piece;
       this.setTileData(to.x, to.y, { piece: piece });
       this.setTileData(from.x, from.y, { piece: null });
+      if (this.turn === "white") {
+        this.turn = "black";
+      } else {
+        this.turn = "white";
+      }
     }
     populateBoard() {
         for (let i = 0; i < this.width; i++) {

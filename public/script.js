@@ -229,6 +229,17 @@ function renderGUI() {
     pop()
   }
   push()
+    fill(255)
+    textAlign(CENTER)
+    if (gameData) {
+      if (gameData.turn == color) {
+        text("It's your turn!", 0, (windowHeight/16)*0.5)
+      } else if (gameData.turn != color) {
+        text("It's the other player's turn!", 0, (windowHeight/16)*0.5)
+      }
+  }
+  pop()
+  push()
     
     //console.log(maxcamtilt, mincamtilt)
     // Clamp the camera's camtilt angle
@@ -398,7 +409,7 @@ function selectTile(chessBoardObject, x, y) {
   if (!chessBoard[x][y].selected) {
     for (let i = 0; i < chessBoardObject.getWidth(); i++) {
       for (let j = 0; j < chessBoardObject.getHeight(); j++) {
-        if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor()) && chessBoard[x][y].available) {
+        if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor()) && chessBoard[x][y].available && gameData.turn == color) {
             const move = {
               from: { x: i, y: j },
               to: { x: x, y: y }
