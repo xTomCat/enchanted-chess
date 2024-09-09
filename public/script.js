@@ -12,6 +12,7 @@ let uiBuffer;
 let mouseClickedLoc
 let availableMoves = null
 let color = "unset!"
+let debug = false
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -70,7 +71,6 @@ function setup() {
 
   socket.on('roomCreated', (roomCode) => {
     room = roomCode
-    color = "black"
     let roomCloseButton = createButton('Close room')
     roomCloseButton.position(8, windowHeight-88)
     roomCloseButton.mousePressed(closeRoom)
@@ -79,6 +79,7 @@ function setup() {
 
   socket.on('roomClosed', () => {
     room = null
+    color = "unset!"
     console.log('Room closed')
     gameData = null
   })
@@ -109,8 +110,9 @@ function setup() {
     chessBoardArray = chessBoard.getBoard()
   })
 
-  socket.on('setColor', (color) => {
-    color = color
+  socket.on('setColor', (setColor) => {
+    console.log("Color set to: " + setColor)
+    color = setColor
   })
 }
 
@@ -202,6 +204,13 @@ function renderGUI() {
     text("Name: " + nickname + "\nColor: " + color, (windowWidth/16)*0.52, (windowHeight/16)*0.80)
     noStroke()
   pop()
+  if (debug) {
+    push()
+    fill(255)
+    textAlign(LEFT)
+    text("[DEBUG]\nFPS: " + round(frameRate()), (windowWidth/16)*0.5, (-windowHeight/16)*0.8)
+    pop()
+  }
   if (gameData) {
     const players = gameData.players
     push()
@@ -244,7 +253,7 @@ function renderGUI() {
 
 
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
+  resizeCanvas(windowWidth-15, windowHeight-15);
 }
 
 function drawChessBoard(chessBoardObject) {
@@ -362,6 +371,16 @@ function keyPressed() {
     console.log("Z: " + cam.eyeZ)
     console.log("FOV: " + cam.cameraFOV)
   }
+  if (key === "F2") {
+    if (debug) {
+      console.log("Debug: OFF!")
+      debug = false
+    } else {
+      console.log("Debug: ON!")
+      debug = true
+    }
+    
+  }
 
 }
 
@@ -379,8 +398,7 @@ function selectTile(chessBoardObject, x, y) {
   if (!chessBoard[x][y].selected) {
     for (let i = 0; i < chessBoardObject.getWidth(); i++) {
       for (let j = 0; j < chessBoardObject.getHeight(); j++) {
-        if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor())) {
-          if (chessBoard[x][y].available) {
+        if (chessBoard[i][j].selected && chessBoard[i][j].piece && chessBoard[i][j] !== chessBoard[x][y] && (chessBoard[x][y].piece == null || chessBoard[x][y].piece.getColor() !== chessBoard[i][j].piece.getColor()) && chessBoard[x][y].available) {
             const move = {
               from: { x: i, y: j },
               to: { x: x, y: y }
@@ -388,7 +406,6 @@ function selectTile(chessBoardObject, x, y) {
             chessBoardObject.move(move);
             socket.emit('move', move);
             pieceMoved = true;
-          }
         }
         chessBoard[i][j].selected = false;
       }
@@ -405,7 +422,7 @@ function selectTile(chessBoardObject, x, y) {
         availableMoves = chessBoardObject.getTileData(x, y).piece.getAvailableMoves(chessBoardObject, x, y);
       }
 
-      if (availableMoves != null) {
+      if (availableMoves != null && chessBoard[x][y].piece.getColor() == color) {
         markAvailableMoves(chessBoard, availableMoves);
       }
     }

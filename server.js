@@ -89,7 +89,7 @@ io.on('connection', (socket) => {
             game.addPlayer(player);
             socket.join('game-' + roomCode);
             console.log(player.name + ' joined a room with code: ' + roomCode);
-            setPlayerColor(player, "white")
+            setPlayerColor(player, "black")
             makePlayerGenerateBoard(player, game.getBoard())
             sendGameDataToRoom(roomCode)
         } else {
@@ -102,6 +102,12 @@ io.on('connection', (socket) => {
         if (games[roomCode] && games[roomCode].players.find(p => p.socketId === socket.id)) {
             const player1 = games[roomCode].players[0];
             const player2 = games[roomCode].players[1];
+            if (player1) {
+              setPlayerColor(player1, "unset!");
+            }
+            if (player2) {
+              setPlayerColor(player2, "unset!");
+            }
             delete games[roomCode];
             io.to('game-' + roomCode).emit('roomClosed');
             if (player1) {
@@ -149,8 +155,9 @@ function makePlayerGenerateBoard(player, board) {
 }
 
 function setPlayerColor(player, color) {
-    io.to(player.socketId).emit('setColor', color);
-    console.log("Asked player to set color: " + player.name);
+  player.color = color;
+  io.to(player.socketId).emit('setColor', color);
+  console.log("Asked player to set color to " + player.color + ": " + player.name);
 }
 
 class Player {
@@ -159,6 +166,7 @@ class Player {
       this.ip = ip;
       this.UUID = uuidv4();
       this.socketId = socketId;
+      this.color = "unset!";
     }
   }
 
