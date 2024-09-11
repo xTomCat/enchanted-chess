@@ -2,6 +2,8 @@ class ChessPiece {
   constructor(type, color) {
     this.color = color
     this.type = type
+    this.inCheck = false
+
     let resolution = 100
     let tileGraphic = createGraphics(resolution, resolution)
     let sx, sy
@@ -48,6 +50,7 @@ class ChessPiece {
     texture(this.texture);
     model(this.model)
     pop()
+    
   }
 
   getType() {
@@ -56,6 +59,12 @@ class ChessPiece {
 
   getColor() {
     return this.color;
+  }
+
+  setCheck(check) {
+    if (this.type == "king") {
+      this.inCheck = check
+    }
   }
 
   getAvailableMoves(chessBoardObject, x, y) {

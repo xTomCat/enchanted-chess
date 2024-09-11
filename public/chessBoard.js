@@ -86,7 +86,36 @@ class Chessboard {
     let piece = this.getTileData(from.x, from.y).piece;
     this.setTileData(to.x, to.y, { piece: piece });
     this.setTileData(from.x, from.y, { piece: null });
+    //let isPieceChecked = this.didLastMovePutKingInCheck(move);
+    //if (isPieceChecked) {
+    //  check = isPieceChecked
+    //}
   }
+
+  //didLastMovePutKingInCheck(move) {
+  //  let to = move.to;
+  //  console.log("X: " + to.x + " Y: " + to.y + " Chessboard: " + this);
+  //  if (!this.getTileData(to.x, to.y).piece) {
+  //    return
+  //  }
+  //  let movesToCheckForKing = this.getTileData(to.x, to.y).piece.getAvailableMoves(this, to.x, to.y);
+  //  for (let i = 0; i < movesToCheckForKing.length; i++) {
+  //    let moveCheck = movesToCheckForKing[i];
+  //    let piece = this.getTileData(moveCheck.x, moveCheck.y).piece;
+  //    if (piece != null && piece.type == "king") {
+  //      if (piece.color == "white") {
+  //        piece.setCheck(true)
+  //        console.log("White King in Check");
+  //        return "white";
+  //      } else if (piece.color == "black") {
+  //        piece.setCheck(true)
+  //        console.log("Black King in Check");
+  //        return "black";
+  //      }
+  //    }
+  //  }
+  //  return false;
+  //}
 
   populateBoard() {
     for (let i = 0; i < this.width; i++) {
@@ -113,5 +142,44 @@ class Chessboard {
     this.setTileData(5, this.height - 1, { piece: new ChessPiece("bishop", "white") });
     this.setTileData(6, this.height - 1, { piece: new ChessPiece("knight", "white") });
     this.setTileData(7, this.height - 1, { piece: new ChessPiece("rook", "white") });
+  }
+
+  isInCheck(color) {
+    let kingPos = this.findKing(color);
+    let king = this.getTileData(kingPos.x, kingPos.y).piece;
+    //loop through the board
+    for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        //get the piece at loop location
+        let piece = this.getTileData(j, i).piece;
+        //if the piece exists and is not the same color as the king
+        if (piece && piece.color != color) {
+
+          let moves = piece.getAvailableMoves(this, j, i);
+          for (let i = 0; i < moves.length; i++) {
+            if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+
+}
+
+  findKing(color) {
+    for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        if (this.getTileData(j, i)) {
+          if (this.getTileData(j,i).piece) {
+        let piece = this.getTileData(j, i).piece;
+        if (piece != null && piece.color == color && piece.type == "king") {
+          return { x: j, y: i };
+        }
+      }
+    }
+    }
+    }
   }
 }

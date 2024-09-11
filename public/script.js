@@ -13,6 +13,7 @@ let mouseClickedLoc
 let availableMoves = null
 let color = "unset!"
 let debug = false
+let check
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -88,6 +89,13 @@ function setup() {
     gameData = gameDataRecieved
     console.log("State: " + gameDataRecieved.state)
     compareBoard(chessBoard, gameDataRecieved.board)
+    if (chessBoard.isInCheck("black")) {
+      check = "black"
+    } else if (chessBoard.isInCheck("white")) {
+      check = "white"
+    } else {
+      check = null
+    }
     //board = gameDataRecieved.board
     //for (let i = 0; i < board.length; i++) {
     //  for (let j = 0; j < board[i].length; j++) {
@@ -166,6 +174,9 @@ function joinGameByRoomCode() {
 function draw() {
   background(50)
   cam.lookAt(0,0,0)
+  ambientLight(128, 128, 128);
+  directionalLight(128, 128, 128, 0, 1, 0);
+  lightFalloff(1, 0, 0)
   if(!mousePressedInBoard){
     orbitControl()
   }
@@ -184,6 +195,7 @@ function renderGUI() {
   const mincamtilt = 1.5
   let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX)
   let camtilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
+  noLights()
   cam.eyeY = cam.centerY + dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ) * tan(camtilt);
   gl.disable(gl.CULL_FACE)
   translate(cam.eyeX, cam.eyeY, cam.eyeZ)
@@ -212,6 +224,21 @@ function renderGUI() {
     text("[DEBUG]\nFPS: " + round(frameRate()), (windowWidth/16)*0.5, (-windowHeight/16)*0.8)
     pop()
   }
+  if (check) {
+    if (check == "white") {
+      push()
+      fill(255)
+      textAlign(LEFT)
+      text("White is in check!", 0, (-windowHeight/16)*0.8)
+      pop()
+    } else if (check == "black") {
+      push()
+      fill(255)
+      textAlign(LEFT)
+      text("Black is in check!", 0, (-windowHeight/16)*0.8)
+      pop()
+    }
+}
   if (gameData) {
     const players = gameData.players
     push()
@@ -287,26 +314,32 @@ function drawChessBoard(chessBoardObject) {
       if (hoveredTile) {
       if (i == hoveredTile.x && j == hoveredTile.y) {
         //If a move is available, only the available moves can be hovered.
-        if (availableMoves) {
-          if (availableMoves.some(move => move.x === i && move.y === j) || chessBoard[i][j].selected) {
-            chessBoard[i][j].hovered = true;
-          }
-        } else {
+        //if (availableMoves) {
+        //  if (availableMoves.some(move => move.x === i && move.y === j) || chessBoard[i][j].selected) {
+        //    chessBoard[i][j].hovered = true;
+        //  }
+        //} else {
           chessBoard[i][j].hovered = true;
-        }
+        //}
       } else {chessBoard[i][j].hovered = false}
       } else {chessBoard[i][j].hovered = false}
       translate(chessBoard[i][j].x, chessBoard[i][j].y, chessBoard[i][j].z);
       rotateX(PI/2)
       rotateZ(PI/2)
       let tileTexture = chessBoardObject.getTileTexture(i, j);
+      if (chessBoard[i][j].piece) {
+        chessBoard[i][j].piece.drawModel()
+      }
       //Render the tiles differently if they're selected or hovered
       if (chessBoard[i][j].selected == true) {
+        emissiveMaterial(0, 255, 0)
         fill(0,255,0)
         //noStroke()
       }
       else if (chessBoard[i][j].available == true) {
-        fill(0,0,255)
+        fill(255, 95, 31)
+        emissiveMaterial(255, 95, 31)
+        
         //noStroke()
       } 
       else {
@@ -314,12 +347,10 @@ function drawChessBoard(chessBoardObject) {
         texture(tileTexture);
       }
       if (chessBoard[i][j].hovered == true) {
-        fill(255,0,0)
+        emissiveMaterial(255, 255, 255)
+        //fill(255,0,0)
         //noStroke()
       } 
-      if (chessBoard[i][j].piece) {
-        chessBoard[i][j].piece.drawModel()
-      }
       
       
 

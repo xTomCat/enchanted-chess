@@ -237,10 +237,12 @@ class Game {
     move(move) {
       let from = move.from;
       let to = move.to;
+      if (!this.getTileData(from.x, from.y).piece) {
+        console.log("No piece on the selected tile!");
+        return;
+      }
       let piece = this.getTileData(from.x, from.y).piece;
-      console.log("from: " + from.x + ", " + from.y)
       let availableMoves = piece.getAvailableMoves(this, from.x, from.y);
-      console.log("availableMoves: " + availableMoves)
 
       if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {
         this.setTileData(to.x, to.y, { piece: piece });
@@ -334,24 +336,15 @@ class ChessPiece {
     
       getPawnMoves(Game, x, y) {
         let chessBoard = Game.getBoard();
-        //console.log("chessboard tile 0,0:" + chessBoard[3][3].piece.color)
-        //console.log("chessboard tile error:" + chessBoard[4][5].piece.color)
         let chessPiece = chessBoard[x][y].piece;
         let moves = [];
         let direction = chessPiece.color === "white" ? -1 : 1;
-        console.log("Direction: " + direction)
         let forwardOne = { x: x, y: y + direction }
         let forwardTwo = { x: x, y: y + 2 * direction }
         let leftCapture = { x: x - 1, y: y + direction }
         let rightCapture = { x: x + 1, y: y + direction }
-        //console.log("rightCapture: " + rightCapture.x + ", " + rightCapture.y)
-        //console.log("leftCapture: " + leftCapture.x + ", " + leftCapture.y)
-        //console.log("Forward one: " + forwardOne.x + ", " + forwardOne.y)
-        //console.log("Forward one tile: " + chessBoard[forwardOne.x][forwardOne.y].piece)
         if (forwardOne.x >= 0 && forwardOne.x < Game.getWidth() && forwardOne.y >= 0 && forwardOne.y < Game.getHeight()) {
-          console.log("a")
           if (!chessBoard[forwardOne.x][forwardOne.y].piece) {
-            console.log("b")
             moves.push(forwardOne)
             if (!(forwardTwo.x >= 0 && forwardTwo.x < Game.getWidth() && forwardTwo.y >= 0 && forwardTwo.y < Game.getHeight())) {
               return;
@@ -376,7 +369,6 @@ class ChessPiece {
           }
           }
         }
-        console.log("Pawn moves: " + moves)
         return moves
       }
     
