@@ -14,6 +14,8 @@ let availableMoves = null
 let color = "unset!"
 let debug = false
 let check
+let skyShader
+let time = 0.0
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -26,6 +28,7 @@ function preload() {
   pawnModel = loadModel('Assets/models/chessPawn.obj');
   queenModel = loadModel('Assets/models/chessQueen.obj');
   kingModel = loadModel('Assets/models/chessKing.obj');
+  //skyShader = loadShader('Assets/vert.glsl', 'Assets/frag.glsl');
 }
 
 function setup() {
@@ -172,7 +175,23 @@ function joinGameByRoomCode() {
 }
 
 function draw() {
-  background(50)
+  background(100)
+  //push()
+  //noStroke()
+  //// Pass time uniform
+  //skyShader.setUniform('u_time', millis() / 1000.0);
+//
+  //// Extract projection and model-view matrices as Float32Array
+  //let pMatrix = this._renderer.uPMatrix.mat4;
+  //let mvMatrix = this._renderer.uMVMatrix.mat4;
+//
+  //// Pass them as uniforms to the shader
+  //skyShader.setUniform('projectionMatrix', pMatrix);
+  //skyShader.setUniform('modelViewMatrix', mvMatrix);
+  //shader(skyShader)  // Draw a rotating box to test the shader
+  //rotateY(frameCount * 0.01);
+  //box(2000);
+  //pop()
   cam.lookAt(0,0,0)
   ambientLight(128, 128, 128);
   directionalLight(128, 128, 128, 0, 1, 0);
@@ -355,7 +374,7 @@ function drawChessBoard(chessBoardObject) {
       
 
       shininess(100);
-      tint(200, 255)
+      //tint(255, 255)
       square(0, 0, tileSize)
       
       translate(0, 0, -tileSize/2);

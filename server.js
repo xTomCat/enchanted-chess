@@ -182,6 +182,7 @@ class Game {
     this.width = 8;
     this.height = 8;
     this.turn = "white";
+    this.check = null
     for (let i = 0; i < 8; i++) {
         this.chessBoard.push([]);
         for (let j = 0; j < 8; j++) {
@@ -247,6 +248,22 @@ class Game {
       if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {
         this.setTileData(to.x, to.y, { piece: piece });
         this.setTileData(from.x, from.y, { piece: null });
+
+        if (this.isInCheck("black")) {
+          this.check = "black"
+        } else if (this.isInCheck("white")) {
+          this.check = "white"
+        } else {
+          this.check = null
+        }
+
+        if (this.isInCheck(this.turn)) {
+          console.log("Invalid move! King is in check!");
+          this.setTileData(to.x, to.y, { piece: null });
+          this.setTileData(from.x, from.y, { piece: piece });
+          return;
+        }
+
         if (this.turn === "white") {
           this.turn = "black";
         } else {
@@ -293,6 +310,46 @@ class Game {
         this.state = "started";
         sendGameDataToRoom(this.roomCode)
       }
+      isInCheck(color) {
+        let kingPos = this.findKing(color);
+        let king = this.getTileData(kingPos.x, kingPos.y).piece;
+        //loop through the board
+        for (let i = 0; i < this.height; i++) {
+          for (let j = 0; j < this.width; j++) {
+            //get the piece at loop location
+            let piece = this.getTileData(j, i).piece;
+            //if the piece exists and is not the same color as the king
+            if (piece && piece.color != color) {
+    
+              let moves = piece.getAvailableMoves(this, j, i);
+              for (let i = 0; i < moves.length; i++) {
+                if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
+                  console.log(color + " king is in check!");
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        return false;
+    
+    }
+    
+      findKing(color) {
+        for (let i = 0; i < this.height; i++) {
+          for (let j = 0; j < this.width; j++) {
+            if (this.getTileData(j, i)) {
+              if (this.getTileData(j,i).piece) {
+            let piece = this.getTileData(j, i).piece;
+            if (piece != null && piece.color == color && piece.type == "king") {
+              return { x: j, y: i };
+            }
+          }
+        }
+        }
+        }
+      }
+
 }
 
 class ChessPiece {

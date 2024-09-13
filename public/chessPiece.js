@@ -91,6 +91,23 @@ class ChessPiece {
         moves = this.getKingMoves(chessBoardObject, x, y);
         break;
     }
+    if (check && this.color === check) {
+      console.log("Editing moves because client is in check!")
+      let newMoves = []
+      for (let i = 0; i < moves.length; i++) {
+        let move = moves[i]
+        let tempPiece = chessBoard[move.x][move.y].piece
+        chessBoard[move.x][move.y].piece = piece
+        chessBoard[x][y].piece = null
+        let check = chessBoardObject.isInCheck(this.color)
+        if (!check) {
+          newMoves.push(move)
+        }
+        chessBoard[move.x][move.y].piece = tempPiece
+        chessBoard[x][y].piece = piece
+        moves = newMoves
+      }
+    } 
     return moves;
   }
 
