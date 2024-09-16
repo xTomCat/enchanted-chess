@@ -86,6 +86,13 @@ class Chessboard {
     let piece = this.getTileData(from.x, from.y).piece;
     this.setTileData(to.x, to.y, { piece: piece });
     this.setTileData(from.x, from.y, { piece: null });
+    //if (this.isCheckMate("black")) {
+    //  console.log("Checkmate: Black");
+    //  checkMate = "black";
+    //} else if (this.isCheckMate("white")) {
+    //  console.log("Checkmate: White");
+    //  checkMate = "white";
+    //}
     //let isPieceChecked = this.didLastMovePutKingInCheck(move);
     //if (isPieceChecked) {
     //  check = isPieceChecked
@@ -167,6 +174,20 @@ class Chessboard {
     return false;
 
 }
+
+  isCheckMate(color) {
+    let kingPos = this.findKing(color);
+    let king = this.getTileData(kingPos.x, kingPos.y).piece;
+    let moves = king.getAvailableMoves(this, kingPos.x, kingPos.y);
+    let isInCheck = this.isInCheck(color);
+    console.log("Checking for checkmate: \nMoves: " + moves[0] + " " + moves[1] + " " + moves[2] + "\nKing: " + kingPos.x + ", " + kingPos.y + "\nCheck: " + isInCheck + "\nLength: " + moves.length + "\nColor: " + color);
+    if (moves.length == 0 && isInCheck) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
 
   findKing(color) {
     for (let i = 0; i < this.height; i++) {

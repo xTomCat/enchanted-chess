@@ -28,7 +28,6 @@ io.on('connection', (socket) => {
                 game.move(move)
                 io.to('game-' + game.roomCode).emit('move', move)
                 sendGameDataToRoom(game.roomCode)
-                console.log(move)
             }
         } else {
             io.to(socket.id).emit('error', 'You need to set a nickname first!')
@@ -45,6 +44,7 @@ io.on('connection', (socket) => {
           if (games[roomCode].players.length === 0) {
             delete games[roomCode];
             console.log('Room closed: ' + roomCode);
+            console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
           }
           sendGameDataToRoom(roomCode)
         }
@@ -70,8 +70,9 @@ io.on('connection', (socket) => {
         let roomCode = generateRoomCode6Digits();
         socket.join('game-' + roomCode);
 
-        const player = connectedPlayers.find(p => p.socketId === socket.id)
+        // const player = connectedPlayers.find(p => p.socketId === socket.id)
         const game = new Game(roomCode);
+        console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length + 1))
         games[roomCode] = game;
         game.populateBoard();
         game.addPlayer(player);
@@ -110,16 +111,27 @@ io.on('connection', (socket) => {
               setPlayerColor(player2, "unset!");
             }
             delete games[roomCode];
-            io.to('game-' + roomCode).emit('roomClosed');
+            //io.to('game-' + roomCode).emit('roomClosed');
             if (player1) {
-                socket.leave('game-' + roomCode);
+              leaveRoom(player1, roomCode);
             }
             if (player2) {
-                socket.leave('game-' + roomCode);
+              leaveRoom(player2, roomCode);
             }
         };
     })
 })
+
+function leaveRoom(player, roomCode) {
+  if (player) {
+    const socket = io.sockets.sockets.get(player.socketId);
+    io.to(player.socketId).emit('roomClosed');
+    if (socket) {
+      //leaveGameOnClient(player)
+      socket.leave('game-' + roomCode);
+    }
+  }
+}
 
 function logConnectedPlayers() {
     console.log('Connected Players:');
@@ -146,6 +158,7 @@ function sendGameDataToRoom(roomCode) {
         board: game.getBoard(),
         state: game.getState(),
         turn: game.getTurn(),
+        check: game.check,
         roomCode: roomCode
         
 }
@@ -154,13 +167,20 @@ io.to('game-' + roomCode).emit('gameData', gameData);
 
 function makePlayerGenerateBoard(player, board) {
     io.to(player.socketId).emit('initBoard', board);
-    console.log("Asked player to generate client-side board: " + player.name);
 }
 
 function setPlayerColor(player, color) {
   player.color = color;
   io.to(player.socketId).emit('setColor', color);
-  console.log("Asked player to set color to " + player.color + ": " + player.name);
+}
+
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function leaveGameOnClient(player) {
+  io.to(player.socketId).emit('gameClosed');
 }
 
 class Player {
@@ -235,11 +255,35 @@ class Game {
         return null;
       }
     }
+    async close() {
+      this.state = "closing";
+      sendGameDataToRoom(this.roomCode)
+      for (let i = 0; i <= 5; i++) {
+        if (this.players[0]) {
+          io.to(this.players[0].socketId).emit('leavingSoon', 5-i);
+        }
+        if (this.players[1]) {
+          io.to(this.players[1].socketId).emit('leavingSoon', 5-i);
+        }
+        await sleep(1000)
+      }
+      if (this.players[0]) {
+        leaveRoom(this.players[0], this.roomCode)
+      }
+      if (this.players[1]) {
+        leaveRoom(this.players[1], this.roomCode)
+      }
+      console.log("Game closed with ropm code: " + this.roomCode);
+      console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
+      games[this.roomCode] = null;
+      this.players = [];
+      
+      
+    }
     move(move) {
       let from = move.from;
       let to = move.to;
       if (!this.getTileData(from.x, from.y).piece) {
-        console.log("No piece on the selected tile!");
         return;
       }
       let piece = this.getTileData(from.x, from.y).piece;
@@ -251,14 +295,25 @@ class Game {
 
         if (this.isInCheck("black")) {
           this.check = "black"
+          if (this.isCheckMate("black")) {
+            this.checkMate = "black"
+            this.state = "checkmate"
+            sendGameDataToRoom(this.roomCode)
+            this.close()
+          }
         } else if (this.isInCheck("white")) {
           this.check = "white"
+          if (this.isCheckMate("white")) {
+            this.checkMate = "white"
+            this.state = "checkmate"
+            sendGameDataToRoom(this.roomCode)
+            this.close()
+          }
         } else {
           this.check = null
         }
 
         if (this.isInCheck(this.turn)) {
-          console.log("Invalid move! King is in check!");
           this.setTileData(to.x, to.y, { piece: null });
           this.setTileData(from.x, from.y, { piece: piece });
           return;
@@ -322,33 +377,47 @@ class Game {
             if (piece && piece.color != color) {
     
               let moves = piece.getAvailableMoves(this, j, i);
+              if (moves) {
               for (let i = 0; i < moves.length; i++) {
                 if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
-                  console.log(color + " king is in check!");
                   return true;
                 }
               }
+            }
             }
           }
         }
         return false;
     
     }
+
+    isCheckMate(color) {
+      let kingPos = this.findKing(color);
+      let king = this.getTileData(kingPos.x, kingPos.y).piece;
+      let moves = king.getAvailableMoves(this, kingPos.x, kingPos.y);
+      let isInCheck = this.isInCheck(color);
+      if (moves.length == 0 && isInCheck) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
     
-      findKing(color) {
-        for (let i = 0; i < this.height; i++) {
-          for (let j = 0; j < this.width; j++) {
-            if (this.getTileData(j, i)) {
-              if (this.getTileData(j,i).piece) {
-            let piece = this.getTileData(j, i).piece;
-            if (piece != null && piece.color == color && piece.type == "king") {
-              return { x: j, y: i };
-            }
+    findKing(color) {
+      for (let i = 0; i < this.height; i++) {
+        for (let j = 0; j < this.width; j++) {
+          if (this.getTileData(j, i)) {
+            if (this.getTileData(j,i).piece) {
+          let piece = this.getTileData(j, i).piece;
+          if (piece != null && piece.color == color && piece.type == "king") {
+            return { x: j, y: i };
           }
         }
-        }
-        }
       }
+      }
+      }
+    }
 
 }
 
@@ -388,6 +457,22 @@ class ChessPiece {
             moves = this.getKingMoves(Game, x, y);
             break;
         }
+        if (Game.check && this.color === Game.check) {
+          let newMoves = []
+          for (let i = 0; i < moves.length; i++) {
+            let move = moves[i]
+            let tempPiece = chessBoard[move.x][move.y].piece
+            chessBoard[move.x][move.y].piece = piece
+            chessBoard[x][y].piece = null
+            let check = Game.isInCheck(this.color)
+            if (!check) {
+              newMoves.push(move)
+            }
+            chessBoard[move.x][move.y].piece = tempPiece
+            chessBoard[x][y].piece = piece
+            moves = newMoves
+          }
+        } 
         return moves;
       }
     
@@ -412,7 +497,6 @@ class ChessPiece {
           }
           if (leftCapture.x >= 0 && leftCapture.x < Game.getWidth() && leftCapture.y >= 0 && leftCapture.y < Game.getHeight()) {
             if (chessBoard[leftCapture.x][leftCapture.y].piece) {
-              //console.log("hi!")
               if (chessBoard[leftCapture.x][leftCapture.y].piece.color !== chessPiece.color) {
                 moves.push(leftCapture)
               }

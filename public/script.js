@@ -16,6 +16,8 @@ let debug = false
 let check
 let skyShader
 let time = 0.0
+let checkMate
+let timeUntilLeaving = null
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -64,7 +66,6 @@ function setup() {
   
 
   socket.on('move', (move) => {
-    console.log("Move received: " + move)
     chessBoard.move(move)
   })
 
@@ -83,6 +84,7 @@ function setup() {
 
   socket.on('roomClosed', () => {
     room = null
+    chessBoard = null
     color = "unset!"
     console.log('Room closed')
     gameData = null
@@ -90,15 +92,22 @@ function setup() {
 
   socket.on('gameData', (gameDataRecieved) => { 
     gameData = gameDataRecieved
-    console.log("State: " + gameDataRecieved.state)
+    //console.log("State: " + gameDataRecieved.state)
     compareBoard(chessBoard, gameDataRecieved.board)
-    if (chessBoard.isInCheck("black")) {
-      check = "black"
-    } else if (chessBoard.isInCheck("white")) {
-      check = "white"
-    } else {
-      check = null
-    }
+    //if (chessBoard.isInCheck("black")) {
+    //  check = "black"
+    //  if (chessBoard.isCheckMate("black")) {
+    //    checkMate = "black"
+    //  }
+    //} else if (chessBoard.isInCheck("white")) {
+    //  check = "white"
+    //  if (chessBoard.isCheckMate("white")) {
+    //    checkMate = "white"
+    //  }
+    //} else {
+    //  check = null
+    //}
+    check = gameData.check
     //board = gameDataRecieved.board
     //for (let i = 0; i < board.length; i++) {
     //  for (let j = 0; j < board[i].length; j++) {
@@ -118,13 +127,18 @@ function setup() {
         }
       }
     }
-    console.log("Created board on client!")
     chessBoardArray = chessBoard.getBoard()
   })
 
   socket.on('setColor', (setColor) => {
-    console.log("Color set to: " + setColor)
     color = setColor
+  })
+
+  socket.on('leavingSoon', (count) => {
+    timeUntilLeaving = count
+    if (timeUntilLeaving == 0) {
+      timeUntilLeaving = null
+    }
   })
 }
 
@@ -243,21 +257,6 @@ function renderGUI() {
     text("[DEBUG]\nFPS: " + round(frameRate()), (windowWidth/16)*0.5, (-windowHeight/16)*0.8)
     pop()
   }
-  if (check) {
-    if (check == "white") {
-      push()
-      fill(255)
-      textAlign(LEFT)
-      text("White is in check!", 0, (-windowHeight/16)*0.8)
-      pop()
-    } else if (check == "black") {
-      push()
-      fill(255)
-      textAlign(LEFT)
-      text("Black is in check!", 0, (-windowHeight/16)*0.8)
-      pop()
-    }
-}
   if (gameData) {
     const players = gameData.players
     push()
@@ -274,6 +273,13 @@ function renderGUI() {
       }
       
     pop()
+    if (check && gameData.state == "started") {
+      push()
+      fill(255)
+      textAlign(CENTER)
+      text(check + " is in check!", 0, (-windowHeight/16)*0.85)
+      pop()
+  }
   }
   push()
     fill(255)
@@ -287,7 +293,21 @@ function renderGUI() {
         } else if (gameData.turn != color) {
           text("It's the other player's turn!", 0, (windowHeight/16)*0.5)
         }
+      } else if (gameData.state == "checkmate" || "closing") {
+        let winner 
+        if (gameData.check == "white") {
+          winner = "Black"
+        } else if (gameData.check == "black") {
+          winner = "White"
+        }
+        text("Checkmate! " + winner + " wins!", 0, (windowHeight/16)*0.5)
+        
       }
+  }
+  if (timeUntilLeaving != null) {
+    push()
+    text("Leaving room in: " + timeUntilLeaving, 0, (windowHeight/16)*0.6)
+    pop()
   }
   pop()
   push()

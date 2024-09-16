@@ -295,4 +295,5 @@ class ChessPiece {
     }
     return moves
   }
+
 }
