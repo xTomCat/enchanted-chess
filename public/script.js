@@ -62,7 +62,7 @@ function setup() {
   textSize(5)
   textAlign(CENTER)
   uiBuffer = createGraphics(windowWidth-15, windowHeight-15)
-
+  console.log(cam)
   
 
   socket.on('move', (move) => {
@@ -190,6 +190,7 @@ function joinGameByRoomCode() {
 
 function draw() {
   background(100)
+  
   //push()
   //noStroke()
   //// Pass time uniform
@@ -224,8 +225,7 @@ function draw() {
 }
 
 function renderGUI() {
-  const maxcamtilt = -1.5
-  const mincamtilt = 1.5
+  push()
   let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX)
   let camtilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ))
   noLights()
@@ -236,7 +236,12 @@ function renderGUI() {
   rotateZ(camtilt + PI)
   translate(100, 0, 0)
   rotateY(-PI/2)
-  rotateZ(PI)
+
+  //The amount of suffering the below lines have caused is genuinely immesurable.
+  if (cam.upY > 0) {
+  rotateZ(-PI)
+  }
+
   push()
     fill(150)
     rectMode(CENTER)
@@ -254,7 +259,7 @@ function renderGUI() {
     push()
     fill(255)
     textAlign(LEFT)
-    text("[DEBUG]\nFPS: " + round(frameRate()), (windowWidth/16)*0.5, (-windowHeight/16)*0.8)
+    text("[DEBUG]\nFPS: " + round(frameRate()) + "\nCamTilt: " + round(camtilt, 3) + "\nPan: " + round(pan, 3) + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (windowWidth/16)*0.5, (-windowHeight/16)*0.8)
     pop()
   }
   if (gameData) {
@@ -314,14 +319,6 @@ function renderGUI() {
     
     //console.log(maxcamtilt, mincamtilt)
     // Clamp the camera's camtilt angle
-    if (camtilt < maxcamtilt) {
-      this._renderer.rotateVelocity.y += -0.1
-      //cam._orbit(0, -0.05, 0)
-      
-    } else if (camtilt > mincamtilt) {
-      this._renderer.rotateVelocity.y += 0.1
-      //cam._orbit(0, 0.05, 0)
-    }
     textAlign(LEFT)
     fill(255)
   pop()
@@ -329,7 +326,7 @@ function renderGUI() {
   
   //ellipse(windowWidth/16, windowHeight/16, 5)
   
-
+  pop()
 }
 
 
