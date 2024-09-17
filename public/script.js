@@ -8,15 +8,12 @@ let gl
 let socket
 let nickname = "anonymous"
 let gameData = null
-let uiBuffer;
 let mouseClickedLoc
 let availableMoves = null
 let color = "unset!"
 let debug = false
 let check
-let skyShader
 let time = 0.0
-let checkMate
 let timeUntilLeaving = null
 
 function preload() {
@@ -31,6 +28,7 @@ function preload() {
   queenModel = loadModel('Assets/models/chessQueen.obj');
   kingModel = loadModel('Assets/models/chessKing.obj');
   //skyShader = loadShader('Assets/vert.glsl', 'Assets/frag.glsl');
+  outlineShader = loadShader('Assets/outline.vert', 'Assets/outline.frag');
 }
 
 function setup() {
@@ -57,12 +55,9 @@ function setup() {
   cam.eyeZ = 300
   cam.eyeX = 340
   cam.eyeY = -340
-  guiGraphics = createGraphics(windowWidth-15, windowHeight-15)
   textFont(inconsolata)
   textSize(5)
   textAlign(CENTER)
-  uiBuffer = createGraphics(windowWidth-15, windowHeight-15)
-  console.log(cam)
   
 
   socket.on('move', (move) => {

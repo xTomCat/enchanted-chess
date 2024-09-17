@@ -41,16 +41,13 @@ class ChessPiece {
   }
 
   drawModel() {
-    push()
-    rotateX(PI / 2)
-    translate(0, 0, 0)
-    scale(25)
-
-    noStroke()
-    texture(this.texture);
-    model(this.model)
-    pop()
-    
+     push();
+     rotateX(PI / 2);
+     scale(25);
+     noStroke();
+     texture(this.texture);
+     model(this.model);
+     pop();
   }
 
   getType() {

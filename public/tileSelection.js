@@ -20,7 +20,6 @@ function getSelectedTile(mouseX, mouseY, chessBoardObject) {
   // invert the combined matrix
   let invCombinedMatrix = mat4.create();
   mat4.invert(invCombinedMatrix, combinedMatrix);
-
   // transform the NDC coordinates to world coordinates for the near and far points
   let nearPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, -1], invCombinedMatrix);
   let farPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, 1], invCombinedMatrix);
