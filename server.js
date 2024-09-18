@@ -16,7 +16,7 @@ app.use(express.static('public'));
 
 io.on('connection', (socket) => {
     console.log('New client connected with ID: ' + socket.id);
-    const player = new Player('Anonymous', socket.handshake.address, socket.id);
+    const player = new Player('Anonymous', socket.id);
     connectedPlayers.push(player);
     logConnectedPlayers();
     
@@ -78,8 +78,8 @@ io.on('connection', (socket) => {
         game.addPlayer(player);
         console.log(player.name + ' created a room with code: ' + roomCode);
         io.to(socket.id).emit('roomCreated', roomCode, player.name);
-        setPlayerColor(player, "white")
-        makePlayerGenerateBoard(player, game.getBoard())
+        player.setColor("white")
+        player.generateBoardOnClient(game.getBoard())
         sendGameDataToRoom(roomCode)
     });
 
@@ -90,8 +90,8 @@ io.on('connection', (socket) => {
             game.addPlayer(player);
             socket.join('game-' + roomCode);
             console.log(player.name + ' joined a room with code: ' + roomCode);
-            setPlayerColor(player, "black")
-            makePlayerGenerateBoard(player, game.getBoard())
+            player.setColor("black")
+            player.generateBoardOnClient(game.getBoard())
             sendGameDataToRoom(roomCode)
             game.start()
         } else {
@@ -105,38 +105,27 @@ io.on('connection', (socket) => {
             const player1 = games[roomCode].players[0];
             const player2 = games[roomCode].players[1];
             if (player1) {
-              setPlayerColor(player1, "unset!");
+              player.setColor("unset!")
             }
             if (player2) {
-              setPlayerColor(player2, "unset!");
+              player.setColor("unset!")
             }
             delete games[roomCode];
             //io.to('game-' + roomCode).emit('roomClosed');
             if (player1) {
-              leaveRoom(player1, roomCode);
+              player1.leaveRoom(player1, roomCode);
             }
             if (player2) {
-              leaveRoom(player2, roomCode);
+              player2.leaveRoom(player2, roomCode);
             }
         };
     })
 })
 
-function leaveRoom(player, roomCode) {
-  if (player) {
-    const socket = io.sockets.sockets.get(player.socketId);
-    io.to(player.socketId).emit('roomClosed');
-    if (socket) {
-      //leaveGameOnClient(player)
-      socket.leave('game-' + roomCode);
-    }
-  }
-}
-
 function logConnectedPlayers() {
     console.log('Connected Players:');
     connectedPlayers.forEach(player => {
-        console.log(`Name: ${player.name}, IP: ${player.ip}`, `UUID: ${player.UUID}`, `Socket ID: ${player.socketId}`);
+        console.log(`Name: ${player.name}`, `UUID: ${player.UUID}`, `Socket ID: ${player.socketId}`);
     });
 }
 
@@ -165,32 +154,40 @@ function sendGameDataToRoom(roomCode) {
 io.to('game-' + roomCode).emit('gameData', gameData);
 }
 
-function makePlayerGenerateBoard(player, board) {
-    io.to(player.socketId).emit('initBoard', board);
-}
-
-function setPlayerColor(player, color) {
-  player.color = color;
-  io.to(player.socketId).emit('setColor', color);
-}
-
-
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function leaveGameOnClient(player) {
-  io.to(player.socketId).emit('gameClosed');
-}
-
 class Player {
-    constructor(name, ip, socketId) {
+    constructor(name, socketId) {
       this.name = name;
-      this.ip = ip;
-      this.UUID = uuidv4();
       this.socketId = socketId;
       this.color = "unset!";
     }
+
+    setColor(color) {
+      if (color != "white" || "black" || "unset!") {
+        console.log("Invalid color: " + color)
+        return
+      }
+      this.color = color;
+      io.to(this.socketId).emit('setColor', color)
+    }
+
+    generateBoardOnClient(board) {
+      io.to(this.socketId).emit('initBoard', board)
+    }
+
+    leaveRoom(roomCode) {
+      const socket = io.sockets.sockets.get(this.socketId);
+      io.to(this.socketId).emit('roomClosed');
+      if (socket) {
+        socket.leave('game-' + roomCode);
+      }
+    
+    }
+
+
   }
 
 class Game {
@@ -268,10 +265,10 @@ class Game {
         await sleep(1000)
       }
       if (this.players[0]) {
-        leaveRoom(this.players[0], this.roomCode)
+        this.players[0].leaveRoom(this.roomCode)
       }
       if (this.players[1]) {
-        leaveRoom(this.players[1], this.roomCode)
+        this.players[0].leaveRoom( this.roomCode)
       }
       console.log("Game closed with ropm code: " + this.roomCode);
       console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
@@ -343,8 +340,8 @@ class Game {
         this.setTileData(0, 0, { piece: new ChessPiece("rook", "black") });
         this.setTileData(1, 0, { piece: new ChessPiece("knight", "black") });
         this.setTileData(2, 0, { piece: new ChessPiece("bishop", "black") });
-        this.setTileData(3, 0, { piece: new ChessPiece("queen", "black") });
-        this.setTileData(4, 0, { piece: new ChessPiece("king", "black") });
+        this.setTileData(4, 0, { piece: new ChessPiece("queen", "black") });
+        this.setTileData(3, 0, { piece: new ChessPiece("king", "black") });
         this.setTileData(5, 0, { piece: new ChessPiece("bishop", "black") });
         this.setTileData(6, 0, { piece: new ChessPiece("knight", "black") });
         this.setTileData(7, 0, { piece: new ChessPiece("rook", "black") });
@@ -355,8 +352,8 @@ class Game {
         this.setTileData(0, this.height - 1, { piece: new ChessPiece("rook", "white") });
         this.setTileData(1, this.height - 1, { piece: new ChessPiece("knight", "white") });
         this.setTileData(2, this.height - 1, { piece: new ChessPiece("bishop", "white") });
-        this.setTileData(3, this.height - 1, { piece: new ChessPiece("queen", "white") });
-        this.setTileData(4, this.height - 1, { piece: new ChessPiece("king", "white") });
+        this.setTileData(4, this.height - 1, { piece: new ChessPiece("queen", "white") });
+        this.setTileData(3, this.height - 1, { piece: new ChessPiece("king", "white") });
         this.setTileData(5, this.height - 1, { piece: new ChessPiece("bishop", "white") });
         this.setTileData(6, this.height - 1, { piece: new ChessPiece("knight", "white") });
         this.setTileData(7, this.height - 1, { piece: new ChessPiece("rook", "white") });

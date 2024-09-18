@@ -27,8 +27,6 @@ function preload() {
   pawnModel = loadModel('Assets/models/chessPawn.obj');
   queenModel = loadModel('Assets/models/chessQueen.obj');
   kingModel = loadModel('Assets/models/chessKing.obj');
-  //skyShader = loadShader('Assets/vert.glsl', 'Assets/frag.glsl');
-  outlineShader = loadShader('Assets/outline.vert', 'Assets/outline.frag');
 }
 
 function setup() {
