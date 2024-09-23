@@ -21,7 +21,9 @@ io.on('connection', (socket) => {
     logConnectedPlayers();
     
     socket.on('move', (move) => {
-        const player = connectedPlayers.find(p => p.socketId === socket.id) 
+      console.log("Player attributes: " + player.name + " " + player.color + " " + player.socketId)
+        const player = connectedPlayers.find(p => p.socketId === socket.id) //For some reason removing this sometimes breaks stuff????? why?????????
+
         if (player) {
             const game = Object.values(games).find(g => g.players.includes(player))
             if (game) {
@@ -70,7 +72,7 @@ io.on('connection', (socket) => {
         let roomCode = generateRoomCode6Digits();
         socket.join('game-' + roomCode);
 
-        // const player = connectedPlayers.find(p => p.socketId === socket.id)
+        //const player = connectedPlayers.find(p => p.socketId === socket.id)
         const game = new Game(roomCode);
         console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length + 1))
         games[roomCode] = game;
@@ -166,12 +168,14 @@ class Player {
     }
 
     setColor(color) {
-      if (color != "white" || "black" || "unset!") {
+      if (color == "white" || color == "black" || color == "unset!") {
+        this.color = color;
+        io.to(this.socketId).emit('setColor', color)
+      } else {
         console.log("Invalid color: " + color)
         return
       }
-      this.color = color;
-      io.to(this.socketId).emit('setColor', color)
+      
     }
 
     generateBoardOnClient(board) {
@@ -185,6 +189,10 @@ class Player {
         socket.leave('game-' + roomCode);
       }
     
+    }
+
+    isInGame() {
+      return games.find(g => g.players.includes(this))
     }
 
 
@@ -212,7 +220,9 @@ class Game {
     }
   }
   addPlayer(player) {
-    this.players.push(player);
+    if (this.players.length < 2) {
+      this.players.push(player);
+    }
     //socket.emit('askToJoin', player.name);
     //io.to(player.socketId).emit('askToJoin', player.name);
   }
@@ -359,8 +369,12 @@ class Game {
         this.setTileData(7, this.height - 1, { piece: new ChessPiece("rook", "white") });
       }
       start() {
-        this.state = "started";
-        sendGameDataToRoom(this.roomCode)
+        if (this.state === "waiting" && this.players.length === 2) {
+          this.state = "started";
+          sendGameDataToRoom(this.roomCode)
+        } else (
+          console.log("Game could not start!")
+        )
       }
       isInCheck(color) {
         let kingPos = this.findKing(color);

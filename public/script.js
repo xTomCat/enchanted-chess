@@ -85,33 +85,14 @@ function setup() {
 
   socket.on('gameData', (gameDataRecieved) => { 
     gameData = gameDataRecieved
-    //console.log("State: " + gameDataRecieved.state)
+    console.log("gameData: ")
+    console.log(gameData)
     compareBoard(chessBoard, gameDataRecieved.board)
-    //if (chessBoard.isInCheck("black")) {
-    //  check = "black"
-    //  if (chessBoard.isCheckMate("black")) {
-    //    checkMate = "black"
-    //  }
-    //} else if (chessBoard.isInCheck("white")) {
-    //  check = "white"
-    //  if (chessBoard.isCheckMate("white")) {
-    //    checkMate = "white"
-    //  }
-    //} else {
-    //  check = null
-    //}
     check = gameData.check
-    //board = gameDataRecieved.board
-    //for (let i = 0; i < board.length; i++) {
-    //  for (let j = 0; j < board[i].length; j++) {
-    //    if (board[i][j].piece) {
-    //      chessBoard.setTileData(i, j, {piece: new ChessPiece(board[i][j].piece.type, board[i][j].piece.color)})
-    //    }
-    //  }
-    //}
   })
 
   socket.on('initBoard', (board) => {
+    console.log("init board recieved")
     chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
     for (let i = 0; i < board.length; i++) {
       for (let j = 0; j < board[i].length; j++) {
@@ -124,6 +105,7 @@ function setup() {
   })
 
   socket.on('setColor', (setColor) => {
+    console.log("Color set to: " + setColor)
     color = setColor
   })
 
@@ -383,7 +365,6 @@ function drawChessBoard(chessBoardObject) {
       
       
 
-      shininess(100);
       //tint(255, 255)
       square(0, 0, tileSize)
       

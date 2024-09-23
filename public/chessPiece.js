@@ -2,7 +2,6 @@ class ChessPiece {
   constructor(type, color) {
     this.color = color
     this.type = type
-    this.inCheck = false
 
     let resolution = 100
     let tileGraphic = createGraphics(resolution, resolution)
@@ -64,7 +63,7 @@ class ChessPiece {
     }
   }
 
-  getAvailableMoves(chessBoardObject, x, y) {
+  getAvailableMoves(chessBoardObject, x, y, check = false) {
     let chessBoard = chessBoardObject.getBoard();
     let piece = chessBoard[x][y].piece;
     let moves = [];
@@ -96,14 +95,14 @@ class ChessPiece {
         let tempPiece = chessBoard[move.x][move.y].piece
         chessBoard[move.x][move.y].piece = piece
         chessBoard[x][y].piece = null
-        let check = chessBoardObject.isInCheck(this.color)
-        if (!check) {
+        let checkTrue = chessBoardObject.isInCheck(this.color)
+        if (!checkTrue) {
           newMoves.push(move)
         }
         chessBoard[move.x][move.y].piece = tempPiece
         chessBoard[x][y].piece = piece
-        moves = newMoves
       }
+      moves = newMoves
     } 
     return moves;
   }
