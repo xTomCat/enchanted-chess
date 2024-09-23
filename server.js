@@ -503,8 +503,8 @@ class ChessPiece {
         let direction = chessPiece.color === "white" ? -1 : 1;
         let forwardOne = { x: x, y: y + direction }
         let forwardTwo = { x: x, y: y + 2 * direction }
-        let leftCapture = { x: x - 1, y: y + direction }
-        let rightCapture = { x: x + 1, y: y + direction }
+        let leftCapture = { x: x - 1, y: y + direction, enPassant: false }
+        let rightCapture = { x: x + 1, y: y + direction, enPassant: false }
         if (forwardOne.x >= 0 && forwardOne.x < Game.getWidth() && forwardOne.y >= 0 && forwardOne.y < Game.getHeight()) {
           if (!chessBoard[forwardOne.x][forwardOne.y].piece) {
             moves.push(forwardOne)
@@ -526,19 +526,14 @@ class ChessPiece {
             if (chessBoard[rightCapture.x][rightCapture.y].piece) {
               if (chessBoard[rightCapture.x][rightCapture.y].piece.color !== chessPiece.color) {
                 moves.push(rightCapture)
-            }
-          } 
-          //WIP EN PASSANT
-          else if (chessBoard[(rightCapture.x)-direction][(rightCapture.y)-direction].piece) {
-            let enemyPiece = chessBoard[(rightCapture.x)-direction][(rightCapture.y)-direction].piece
-            if ((enemyPiece.color !== chessPiece.color) && enemyPiece.lastMove && Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y) === 2) {
-              moves.push(rightCapture)
-            }
+            }//WIP EN PASSANT
+          }
           }
 
 
         }
         return moves
+      
       }
     
       getRookMoves(Game, x, y) {
@@ -571,6 +566,7 @@ class ChessPiece {
         }
         return moves
       }
+      
     
       getKnightMoves(Game, x, y) {
         let chessBoard = Game.getBoard()

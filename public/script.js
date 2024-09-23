@@ -131,6 +131,11 @@ function compareBoard(chessBoard, board) {
     for (let j = 0; j < board[i].length; j++) {
       if (board[i][j].piece) {
         if (chessBoard.getTileData(i, j).piece) {
+          if (chessBoard.getTileData(i, j).piece.lastMove || board[i][j].piece.lastMove) {
+            if (chessBoard.getTileData(i, j).piece.lastMove !== board[i][j].piece.lastMove) {
+              chessBoard.getTileData(i, j).piece.lastMove = board[i][j].piece.lastMove
+            }
+          }
           if (chessBoard.getTileData(i, j).piece.type !== board[i][j].piece.type || chessBoard.getTileData(i, j).piece.color !== board[i][j].piece.color) {
             chessBoard.setTileData(i, j, {piece: new ChessPiece(board[i][j].piece.type, board[i][j].piece.color)})
           }
@@ -140,11 +145,7 @@ function compareBoard(chessBoard, board) {
       } else {
         chessBoard.setTileData(i, j, {piece: null})
       }
-      if (chessBoard.getTileData(i, j).piece.lastMove || board.getTileData(i, j).piece.lastMove) {
-        if (chessBoard.getTileData(i, j).piece.lastMove !== board[i][j].piece.lastMove) {
-          chessBoard.getTileData(i, j).piece.lastMove = board[i][j].piece.lastMove
-        }
-      }
+      
     }
   }
 }

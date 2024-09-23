@@ -128,16 +128,53 @@ class ChessPiece {
         }
       }
       if (leftCapture.x >= 0 && leftCapture.x < chessBoardObject.getWidth() && leftCapture.y >= 0 && leftCapture.y < chessBoardObject.getHeight()) {
-        if (chessBoard[leftCapture.x][leftCapture.y].piece !== null && chessBoard[leftCapture.x][leftCapture.y].piece.color !== piece.color) {
-          moves.push(leftCapture)
-        }
+        if (chessBoard[leftCapture.x][leftCapture.y].piece) {
+          if (chessBoard[leftCapture.x][leftCapture.y].piece.color !== piece.color) {
+            moves.push(leftCapture)
+          }
+      }
       }
       if (rightCapture.x >= 0 && rightCapture.x < chessBoardObject.getWidth() && rightCapture.y >= 0 && rightCapture.y < chessBoardObject.getHeight()) {
-        if (chessBoard[rightCapture.x][rightCapture.y].piece !== null && chessBoard[rightCapture.x][rightCapture.y].piece.color !== piece.color) {
-          moves.push(rightCapture)
+        if (chessBoard[rightCapture.x][rightCapture.y].piece) {
+          if (chessBoard[rightCapture.x][rightCapture.y].piece !== null && chessBoard[rightCapture.x][rightCapture.y].piece.color !== piece.color) {
+            moves.push(rightCapture)
+          }
+      } //en passant
+      let enPassantYRequirement = piece.color === "white" ? 3 : 4
+      if (y == enPassantYRequirement) {
+        let leftEnPassant = { x: x + 1, y: y, enPassant: true}
+        let rightEnPassant = { x: x - 1, y: y, enPassant: true }
+        if (leftEnPassant.x >= 0 && leftEnPassant.x < chessBoardObject.getWidth() && leftEnPassant.y >= 0 && leftEnPassant.y < chessBoardObject.getHeight()) {
+          if (chessBoard[leftEnPassant.x][leftEnPassant.y].piece) {
+            let enemyPiece = chessBoard[leftEnPassant.x][leftEnPassant.y].piece
+            if (enemyPiece.type === "pawn" && enemyPiece.color !== piece.color && enemyPiece.lastMove === Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y) === 2) {
+              leftEnPassant.y += direction
+              moves.push(leftEnPassant)
+            }
+          }
+        }
+        if (rightEnPassant.x >= 0 && rightEnPassant.x < chessBoardObject.getWidth() && rightEnPassant.y >= 0 && rightEnPassant.y < chessBoardObject.getHeight()) {
+          console.log("a")
+          console.log("Checking coords: ", rightEnPassant.x, rightEnPassant.y)
+          if (chessBoard[rightEnPassant.x][rightEnPassant.y].piece) {
+            console.log("b")
+            let enemyPiece = chessBoard[rightEnPassant.x][rightEnPassant.y].piece
+            console.log(enemyPiece)
+            console.log("Type: ", enemyPiece.type)
+            console.log("Color: ", enemyPiece.color)
+            console.log("Last move: ", enemyPiece.lastMove)
+            console.log("Amount of spaces moved: " + Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y))
+
+            if (enemyPiece.type === "pawn" && enemyPiece.color !== piece.color && enemyPiece.lastMove === Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y) === 2) {
+              console.log("c")
+              rightEnPassant.y += direction
+              moves.push(rightEnPassant)
+            }
+          }
         }
       }
-      //en passant
+      }
+
       
     }
     return moves
