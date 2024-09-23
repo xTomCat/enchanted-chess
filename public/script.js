@@ -88,6 +88,15 @@ function setup() {
     console.log("gameData: ")
     console.log(gameData)
     compareBoard(chessBoard, gameDataRecieved.board)
+    if (chessBoard && gameDataRecieved.lastMove) {
+      console.log(gameDataRecieved.lastMove)
+      let piece = chessBoard.getTileData(gameDataRecieved.lastMove.to.x, gameDataRecieved.lastMove.to.y).piece;
+       if (piece) {
+        piece.lastMove = gameDataRecieved.lastMove;
+        
+      }
+    }
+    console.log(chessBoard.getBoard())
     check = gameData.check
   })
 
@@ -130,6 +139,11 @@ function compareBoard(chessBoard, board) {
         }
       } else {
         chessBoard.setTileData(i, j, {piece: null})
+      }
+      if (chessBoard.getTileData(i, j).piece.lastMove || board.getTileData(i, j).piece.lastMove) {
+        if (chessBoard.getTileData(i, j).piece.lastMove !== board[i][j].piece.lastMove) {
+          chessBoard.getTileData(i, j).piece.lastMove = board[i][j].piece.lastMove
+        }
       }
     }
   }
@@ -419,6 +433,9 @@ function keyPressed() {
       console.log("Tile selected: (" + (selectedTile.x)+ "," + (selectedTile.y)+")")
       chessBoardArray[selectedTile.x][selectedTile.y].selected = true
       console.log(selectedTile)
+      if (chessBoardArray[selectedTile.x][selectedTile.y].piece) {
+        console.log(chessBoardArray[selectedTile.x][selectedTile.y].piece)
+      }
       //playerTileSelected = [selectedTile.x, selectedTile.z]
     }
   }

@@ -2,6 +2,7 @@ class ChessPiece {
   constructor(type, color) {
     this.color = color
     this.type = type
+    this.lastMove = null
 
     let resolution = 100
     let tileGraphic = createGraphics(resolution, resolution)
@@ -136,6 +137,8 @@ class ChessPiece {
           moves.push(rightCapture)
         }
       }
+      //en passant
+      
     }
     return moves
   }

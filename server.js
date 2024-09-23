@@ -21,8 +21,8 @@ io.on('connection', (socket) => {
     logConnectedPlayers();
     
     socket.on('move', (move) => {
-      console.log("Player attributes: " + player.name + " " + player.color + " " + player.socketId)
         const player = connectedPlayers.find(p => p.socketId === socket.id) //For some reason removing this sometimes breaks stuff????? why?????????
+        console.log("Player attributes: " + player.name + " " + player.color + " " + player.socketId)
 
         if (player) {
             const game = Object.values(games).find(g => g.players.includes(player))
@@ -144,11 +144,14 @@ function sendGameDataToRoom(roomCode) {
     if (!game) {
         return;
     }
+    console.log(game.lastMove)
     const gameData = {
         players: game.getPlayers(),
         board: game.getBoard(),
         state: game.getState(),
         turn: game.getTurn(),
+        lastMove: game.lastMove,
+        lastMovedPiece: game.lastMovedPiece,
         check: game.check,
         roomCode: roomCode
         
@@ -208,6 +211,8 @@ class Game {
     this.height = 8;
     this.turn = "white";
     this.check = null
+    this.lastMove = null
+    this.lastMovedPiece
     for (let i = 0; i < 8; i++) {
         this.chessBoard.push([]);
         for (let j = 0; j < 8; j++) {
@@ -299,6 +304,9 @@ class Game {
       if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {
         this.setTileData(to.x, to.y, { piece: piece });
         this.setTileData(from.x, from.y, { piece: null });
+        piece.lastMove = move
+        this.lastMove = move
+        this.lastMovedPiece = piece
 
         if (this.isInCheck("black")) {
           this.check = "black"
@@ -436,6 +444,7 @@ class ChessPiece {
     constructor(type, color) {
       this.color = color
       this.type = type
+      this.lastMove = null
     }
       getType() {
         return this.type;
@@ -518,8 +527,16 @@ class ChessPiece {
               if (chessBoard[rightCapture.x][rightCapture.y].piece.color !== chessPiece.color) {
                 moves.push(rightCapture)
             }
+          } 
+          //WIP EN PASSANT
+          else if (chessBoard[(rightCapture.x)-direction][(rightCapture.y)-direction].piece) {
+            let enemyPiece = chessBoard[(rightCapture.x)-direction][(rightCapture.y)-direction].piece
+            if ((enemyPiece.color !== chessPiece.color) && enemyPiece.lastMove && Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y) === 2) {
+              moves.push(rightCapture)
+            }
           }
-          }
+
+
         }
         return moves
       }
