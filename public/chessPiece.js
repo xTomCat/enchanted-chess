@@ -4,11 +4,13 @@ class ChessPiece {
     this.type = type
     this.lastMove = null
 
+    //Define the resolution of the texture to be used
     let resolution = 100
-    let tileGraphic = createGraphics(resolution, resolution)
     let sx, sy
+    //Determine the color of the texture
     if (this.color === "black") {
       this.texture = createGraphics(resolution, resolution)
+      //Cut out a random portion of the larger texture and set the texture attribute to that
       sx = random(blackTexture.width - resolution);
       sy = random(blackTexture.height - resolution);
       this.texture.image(blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
@@ -88,35 +90,43 @@ class ChessPiece {
         moves = this.getKingMoves(chessBoardObject, x, y);
         break;
     }
+    //Edit moves if the client is in check
     if (check && this.color === check) {
-      console.log("Editing moves because client is in check!")
+      console.log("Editing moves because player is in check!")
       let newMoves = []
+      //Loop through each move
       for (let i = 0; i < moves.length; i++) {
         let move = moves[i]
         let tempPiece = chessBoard[move.x][move.y].piece
+        //Simulate the move happening. If the king is still in check afterwards, don't save the move.
         chessBoard[move.x][move.y].piece = piece
         chessBoard[x][y].piece = null
         let checkTrue = chessBoardObject.isInCheck(this.color)
+        //If the king isn't in check, save the move
         if (!checkTrue) {
           newMoves.push(move)
         }
+        //Revert board back to original state
         chessBoard[move.x][move.y].piece = tempPiece
         chessBoard[x][y].piece = piece
       }
+      //Set the moves to the new moves
       moves = newMoves
     } 
     return moves;
   }
 
   getPawnMoves(chessBoardObject, x, y) {
-    let chessBoard = chessBoardObject.getBoard();
-    let piece = chessBoard[x][y].piece;
+    let chessBoard = chessBoardObject.getBoard(); //get the board
+    let piece = chessBoard[x][y].piece; //get the piece at the current location
     let moves = [];
-    let direction = piece.color === "white" ? -1 : 1;
+    let direction = piece.color === "white" ? -1 : 1; //determine the piece based on color
+    //initialise the possible moves
     let forwardOne = { x: x, y: y + direction }
     let forwardTwo = { x: x, y: y + 2 * direction }
     let leftCapture = { x: x - 1, y: y + direction }
     let rightCapture = { x: x + 1, y: y + direction }
+    //validate each move and add them to the moves array if valid
     if (forwardOne.x >= 0 && forwardOne.x < chessBoardObject.getWidth() && forwardOne.y >= 0 && forwardOne.y < chessBoardObject.getHeight()) {
       if (chessBoard[forwardOne.x][forwardOne.y].piece === null) {
         moves.push(forwardOne)
@@ -242,6 +252,7 @@ class ChessPiece {
     let chessBoard = chessBoardObject.getBoard()
     let piece = chessBoard[x][y].piece
     let moves = []
+    //Directions different compared to rook
     let directions = [
       { x: 1, y: 1 },
       { x: 1, y: -1 },
