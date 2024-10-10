@@ -174,6 +174,7 @@ function closeRoom() {
 
 function createRoom() {
   socket.emit('createRoom')
+  guiRenderer.setScreen("game")
 }
 
 function promptNickName() {
@@ -211,9 +212,6 @@ function draw() {
   framesSinceMouseMoved++
   background(100)
   guiRenderer.renderBackground()
-  if (frameCount % 60 == 0) {
-    fps = round(frameRate())
-  }
   //push()
   //noStroke()
   //// Pass time uniform
@@ -243,11 +241,12 @@ function draw() {
         }
         else {
           orbitControl()
-          if (chessBoard) {
-            chessBoard.renderBoard()
-          }
+          
         }
     }
+  }
+  if (chessBoard) {
+    chessBoard.renderBoard()
   }
   push()
 

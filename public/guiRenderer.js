@@ -461,7 +461,6 @@ class GuiRenderer {
         switch (buttonName) {
           case "createARoom":
             console.log("createARoom")
-            this.setScreen("game")
             createRoom()
             break
           case "joinARoom":
