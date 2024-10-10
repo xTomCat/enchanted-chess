@@ -1,4 +1,3 @@
-
 class GuiRenderer {
     constructor(width, height, cam) {
         this.width = width
@@ -7,7 +6,10 @@ class GuiRenderer {
         this.currentScreen = ["menu"]
         this.menuChessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
         this.menuChessBoard.populateBoard()
-
+        this.guiScale = 1
+        const baseWidth = 1920;
+        const baseHeight = 1080;
+        this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
 
         this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options"]
         this.menuButtons = {
@@ -16,12 +18,14 @@ class GuiRenderer {
           cardDeck: {hoverOffset: 0, lastHovered: 0, distFromLeft: 20, distFromTop: 79, buttonWidth: 30, buttonHeight: 7, text: "Edit deck"},
           options: {hoverOffset: 0, lastHovered: 0, distFromLeft: 20, distFromTop: 86, buttonWidth: 30, buttonHeight: 7, text: "Options"}
         }
+        
         this.menuLetters = []
-        this.letterWidth = 100
-        this.letterHeight = 242
-        this.topLetters = 9
-        this.bottomLetters = 5
-        let letterImage = title
+        this.letterWidth = 100 //Width of the letter in pixels
+        this.letterHeight = 242 //Height of the letter in pixels
+        this.topLetters = 9 //Amount of letters on top of the image
+        this.bottomLetters = 5 //Amount of letters on the bottom of the image
+        let letterImage = title //PNG containing all the letters
+        //Loop through the image and create a graphics object for each letter, based on their dimensions
         for (let i = 0; i <= this.topLetters; i++) {
           let letter = createGraphics(this.letterWidth, this.letterHeight)
           letter.image(letterImage, 0, 0, this.letterWidth, this.letterHeight, this.letterWidth*i, 0, this.letterWidth, this.letterHeight)
@@ -64,19 +68,27 @@ class GuiRenderer {
       rotateZ(-PI)
       }
     }
-
     renderBackground() {
-      let wHeight = this.height
-      let wWidth = this.width
-      this.setCamera(500)
-      noStroke()
+      let wHeight = this.height;
+      let wWidth = this.width;
+      this.setCamera(500);
+      noStroke();
       let rotationSpeed = 0.001; // Speed of rotation
       let rotationAngle = frameCount * rotationSpeed; // Calculate rotation angle based on frame count
-      rotateZ(rotationAngle) // Rotate around the Y-axis
-      tint(125) // Apply a dark tint to make the background darker
-      texture(menubackground)
-      plane((menubackground.width), (menubackground.height))
-      pop()
+      rotateZ(rotationAngle); // Rotate around the Y-axis
+      tint(125); // Apply a dark tint to make the background darker
+
+      // Calculate the scale factor based on screen resolution and guiScale
+      let scaleFactor = Math.min(wWidth / menubackground.width, wHeight / menubackground.height) * 1.5;
+      if (this.guiScale < 1) {
+      scaleFactor *= (1 / this.guiScale); // Increase the scale factor when guiScale is smaller
+      }
+      let scaledWidth = menubackground.width * scaleFactor;
+      let scaledHeight = menubackground.height * scaleFactor;
+
+      texture(menubackground);
+      plane(scaledWidth, scaledHeight);
+      pop();
     }
 
     renderGUI() {
@@ -87,6 +99,9 @@ class GuiRenderer {
         case "game":
           this.renderGameUI()
           break
+      }
+      if (debug) {
+        this.renderDebugOverlay()
       }
     }
 
@@ -108,36 +123,32 @@ class GuiRenderer {
         fill(255)
         textAlign(LEFT)
         stroke(0)
-        text("Name: " + nickname + "\nColor: " + color, (wWidth/16)*0.52, (wHeight/16)*0.80)
+        textWithShadow("Name: " + nickname + "\nColor: " + color, (wWidth/16)*0.52, (wHeight/16)*0.80)
         noStroke()
       pop()
       if (debug) {
-        push()
-        fill(255)
-        textAlign(LEFT)
-        text("[DEBUG]\nFPS: " + round(frameRate()) + "\nCamTilt: " + round(camtilt, 3) + "\nPan: " + round(pan, 3) + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (wWidth/16)*0.5, (-wHeight/16)*0.8)
-        pop()
+        
       }
       if (gameData) {
         const players = gameData.players
         push()
           fill(255)
           textAlign(LEFT)
-          text("You're in a room! Code: " + gameData.roomCode, -(wWidth/16)*0.9, (-wHeight/16)*0.8)
+          textWithShadow("You're in a room! Code: " + gameData.roomCode, -(wWidth/16)*0.9, (-wHeight/16)*0.8)
           if (players[0]) {
-            text("Player 1: " + players[0].name, -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+10)
+            textWithShadow("Player 1: " + players[0].name, -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+10)
           }
           if (players[1]) {
-            text("Player 2: " + players[1].name, -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+20)
+            textWithShadow("Player 2: " + players[1].name, -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+20)
           } else{
-            text("Waiting for player 2...", -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+20)
+            textWithShadow("Waiting for player 2...", -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+20)
           }
         pop()
         if (check && gameData.state == "started") {
           push()
           fill(255)
           textAlign(CENTER)
-          text(check + " is in check!", 0, (-wHeight/16)*0.85)
+          textWithShadow(check + " is in check!", 0, (-wHeight/16)*0.85)
           pop()
       }
       }
@@ -146,12 +157,12 @@ class GuiRenderer {
         textAlign(CENTER)
         if (gameData) {
           if (gameData.state == "waiting") {
-            text("Waiting for players...", 0, (wHeight/16)*0.5)
+            textWithShadow("Waiting for players...", 0, (wHeight/16)*0.5)
           } else if (gameData.state == "started") {
             if (gameData.turn == color) {
-              text("It's your turn!", 0, (wHeight/16)*0.5)
+              textWithShadow("It's your turn!", 0, (wHeight/16)*0.5)
             } else if (gameData.turn != color) {
-              text("It's the other player's turn!", 0, (wHeight/16)*0.5)
+              textWithShadow("It's the other player's turn!", 0, (wHeight/16)*0.5)
             }
           } else if (gameData.state == "checkmate" || "closing") {
             let winner 
@@ -160,12 +171,12 @@ class GuiRenderer {
             } else if (gameData.check == "black") {
               winner = "White"
             }
-            text("Checkmate! " + winner + " wins!", 0, (wHeight/16)*0.5)
+            textWithShadow("Checkmate! " + winner + " wins!", 0, (wHeight/16)*0.5)
           }
       }
       if (timeUntilLeaving != null) {
         push()
-        text("Leaving room in: " + timeUntilLeaving, 0, (wHeight/16)*0.6)
+        textWithShadow("Leaving room in: " + timeUntilLeaving, 0, (wHeight/16)*0.6)
         pop()
       }
       pop()
@@ -181,109 +192,164 @@ class GuiRenderer {
   renderMenu() {
     let wHeight = this.height
     let wWidth = this.width
+    push()
+    scale(this.guiScale)
     this.menuChessBoard.renderBoard()
+    pop()
     this.setCamera(100)
 
     //Render menu logo letters
     let bounceSpeed = 0.05; // Speed of the bounce
     let bounceHeight = 10; // Height of the bounce
 
+    // Render top letters
+    push();
+    translate(-wWidth / 16, -wHeight / 16 + 20*this.guiScale, 0);
+    for (let i = 0; i <= this.topLetters; i++) {
+      let bounceOffset = sin((frameCount * bounceSpeed) + (i * PI / 4)) * bounceHeight;
+      translate(10*this.guiScale, 0, 0);
       push();
-      translate(-wWidth / 16, -wHeight / 16 + 20, 0);
-      for (let i = 0; i < this.menuLetters.length; i++) {
-        let bounceOffset = sin((frameCount * bounceSpeed) + ((i) * PI / 4)) * bounceHeight;
-        let yOffset = 20
-        let rowIndex
-        if (i > this.topLetters) {
-          yOffset = 45
-          rowIndex = i - this.topLetters
-          
-        } else if (i == this.topLetters) {
-          yOffset = 45
-          rowIndex = i - this.topLetters
-          translate((-wWidth/16) + 10 * (this.topLetters-1 - this.bottomLetters-1) ,25, 0);
+      let mouseIsHovered = false;
+      let letterX = (-wWidth / 16) + (10 * (i + 1)*this.guiScale); // X position of the letter
+      let letterY = (-wHeight / 16) + 20*this.guiScale; // Y position of the letter
+      let letterWidth = (this.letterWidth * 0.1)*this.guiScale; // Approximate width of the letter
+      let letterHeight = (this.letterHeight * 0.1)*this.guiScale; // Approximate height of the letter
+      let maxOffset = 20;
+      let lerpTime = 0.5;
+
+      let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
+      // Check if the mouse is within the letter bounds
+      if (
+        mouseCoords.x > letterX - letterWidth / 2 &&
+        mouseCoords.x < letterX + letterWidth / 2 &&
+        mouseCoords.y > letterY - letterHeight / 2 &&
+        mouseCoords.y < letterY + letterHeight / 2
+      ) {
+        mouseIsHovered = true;
+      }
+
+      if (mouseIsHovered) {
+        if (!this.menuLetters[i].hoverStartTime) {
+        this.menuLetters[i].hoverStartTime = frameCount;
+        }
+        let hoverDuration = frameCount - this.menuLetters[i].hoverStartTime;
+        if (hoverDuration / 100 > lerpTime) {
+        hoverDuration = lerpTime * 100;
+        }
+        this.menuLetters[i].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime);
+        this.menuLetters[i].lastHovered = frameCount;
+        this.menuLetters[i].peak = this.menuLetters[i].hoverOffset;
+      } else {
+        this.menuLetters[i].hoverStartTime = null;
+        let pos = 0;
+        if (this.menuLetters[i].hoverOffset > 0) {
+        let returnDuration = frameCount - this.menuLetters[i].lastHovered;
+        if (returnDuration / 100 > lerpTime) {
+          pos = lerpTime;
         } else {
-          rowIndex = i + 1
+          pos = returnDuration / 100;
         }
-        translate(10,0,0)
-        push();
-        let mouseIsHovered = false;
-        let letterX = (-wWidth / 16) + 10 * (rowIndex); // X position of the letter
-        let letterY = (-wHeight / 16) + yOffset; // Y position of the letter
-        let letterWidth = this.letterWidth * 0.1; // Approximate width of the letter
-        let letterHeight = this.letterHeight * 0.1; // Approximate height of the letter
-        let maxOffset = 20;
-        let lerpTime = 0.5;
-
-        let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
-        // Check if the mouse is within the letter bounds
-        if (
-          mouseCoords.x > letterX - letterWidth / 2 &&
-          mouseCoords.x < letterX + letterWidth / 2 &&
-          mouseCoords.y > letterY - letterHeight / 2 &&
-          mouseCoords.y < letterY + letterHeight / 2
-        ) {
-          mouseIsHovered = true;
-        }
-
-        
-        if (mouseIsHovered) {
-          if (!this.menuLetters[i].hoverStartTime) {
-            this.menuLetters[i].hoverStartTime = frameCount;
-          }
-          let hoverDuration = frameCount - this.menuLetters[i].hoverStartTime;
-          if (hoverDuration / 100 > lerpTime) {
-            hoverDuration = lerpTime * 100;
-          }
-          this.menuLetters[i].hoverOffset = easeOutSine(hoverDuration / 100, 0, maxOffset, lerpTime);
-          this.menuLetters[i].lastHovered = frameCount;
-          this.menuLetters[i].peak = this.menuLetters[i].hoverOffset;
+        this.menuLetters[i].hoverOffset = this.menuLetters[i].peak - easeOutElastic(pos, 0, this.menuLetters[i].peak, lerpTime);
         } else {
-          this.menuLetters[i].hoverStartTime = null;
-          let pos = 0;
-          if (this.menuLetters[i].hoverOffset > 0) {
-            let returnDuration = frameCount - this.menuLetters[i].lastHovered;
-            if (returnDuration / 100 > lerpTime) {
-              pos = lerpTime;
-            } else {
-              pos = returnDuration / 100;
-            }
-            this.menuLetters[i].hoverOffset = this.menuLetters[i].peak - easeOutSine(pos, 0, this.menuLetters[i].peak, lerpTime);
-          } else {
-            this.menuLetters[i].peak = null;
-          }
+        this.menuLetters[i].peak = null;
         }
+      }
 
-        if (this.menuLetters[i].letter) {
-          noStroke();
-          scale(0.1);
-          translate(0, bounceOffset - this.menuLetters[i].hoverOffset, 0);
-          texture(this.menuLetters[i].letter);
-          plane(this.letterWidth, this.letterHeight);
-        }
-        pop();
+      if (this.menuLetters[i].letter) {
+        noStroke();
+        scale(0.1*this.guiScale);
+        translate(0, bounceOffset - this.menuLetters[i].hoverOffset, 0);
+        texture(this.menuLetters[i].letter);
+        plane(this.letterWidth, this.letterHeight);
       }
       pop();
+    }
+    pop();
 
+    // Render bottom letters
+    push();
+    translate(-wWidth / 16, -wHeight / 16 + 45*this.guiScale, 0);
+    for (let i = this.topLetters + 1; i < this.menuLetters.length; i++) {
+      let bounceOffset = sin((frameCount * bounceSpeed) + ((i - this.topLetters) * PI / 4)) * bounceHeight;
+      translate(10*this.guiScale, 0, 0);
+      push();
+      let mouseIsHovered = false;
+      let letterX = (-wWidth / 16) + (10 * (i - this.topLetters)*this.guiScale); // X position of the letter
+      let letterY = (-wHeight / 16) + 45*this.guiScale; // Y position of the letter
+      let letterWidth = (this.letterWidth * 0.1)*this.guiScale; // Approximate width of the letter
+      let letterHeight = (this.letterHeight * 0.1)*this.guiScale; // Approximate height of the letter
+      let maxOffset = 20;
+      let lerpTime = 0.5;
+
+      let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
+      // Check if the mouse is within the letter bounds
+      if (
+        mouseCoords.x > letterX - letterWidth / 2 &&
+        mouseCoords.x < letterX + letterWidth / 2 &&
+        mouseCoords.y > letterY - letterHeight / 2 &&
+        mouseCoords.y < letterY + letterHeight / 2
+      ) {
+        mouseIsHovered = true;
+      }
+
+      if (mouseIsHovered) {
+        if (!this.menuLetters[i].hoverStartTime) {
+        this.menuLetters[i].hoverStartTime = frameCount;
+        }
+        let hoverDuration = frameCount - this.menuLetters[i].hoverStartTime;
+        if (hoverDuration / 100 > lerpTime) {
+        hoverDuration = lerpTime * 100;
+        }
+        this.menuLetters[i].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime);
+        this.menuLetters[i].lastHovered = frameCount;
+        this.menuLetters[i].peak = this.menuLetters[i].hoverOffset;
+      } else {
+        this.menuLetters[i].hoverStartTime = null;
+        let pos = 0;
+        if (this.menuLetters[i].hoverOffset > 0) {
+        let returnDuration = frameCount - this.menuLetters[i].lastHovered;
+        if (returnDuration / 100 > lerpTime) {
+          pos = lerpTime;
+        } else {
+          pos = returnDuration / 100;
+        }
+        this.menuLetters[i].hoverOffset = this.menuLetters[i].peak - easeOutElastic(pos, 0, this.menuLetters[i].peak, lerpTime);
+        } else {
+        this.menuLetters[i].peak = null;
+        }
+      }
+
+      if (this.menuLetters[i].letter) {
+        noStroke();
+        scale(0.1*this.guiScale);
+        translate(0, bounceOffset - this.menuLetters[i].hoverOffset, 0);
+        texture(this.menuLetters[i].letter);
+        plane(this.letterWidth, this.letterHeight);
+      }
+      pop();
+    }
+    pop();
+
+    //Render the card logo
     push();
     noStroke();
-    translate(-wWidth / 16 - 10, -wHeight / 16 + 45, 0);
+    translate(-wWidth / 16 - 10*this.guiScale, -wHeight / 16 + 45*this.guiScale, 0);
     let bounceOffset = sin((frameCount * bounceSpeed) + (16 * PI / 4)) * bounceHeight;
-    translate(80, 0, 0); // Distance from right of the screen
-    scale(0.04);
+    translate(80*this.guiScale, 0, 0); // Distance from right of the screen
+    scale(0.04*this.guiScale);
     translate(0, bounceOffset * 2.5, 0);
     let rotationOffset = sin((frameCount * bounceSpeed) + (16 * PI / 4)) * 0.05; // Rotation offset for slight rotation
     push();
     rotate(PI / 16 + rotationOffset);
     fill(0, 0, 0);
     translate(0, bounceOffset * 1.5, 0);
-    rect(20, 20, backofcard.width, backofcard.height, 15, 15, 15, 15);
+    rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
     pop();
     push();
     rotate(PI / 10 + rotationOffset);
-    translate(35, -30, 0);
+    translate(35*this.guiScale, -30*this.guiScale, 0);
     fill(0, 0, 0);
-    rect(20, 20, backofcard.width, backofcard.height, 15, 15, 15, 15);
+    rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
     texture(backofcard);
     plane(backofcard.width, backofcard.height);
     pop();
@@ -300,82 +366,88 @@ class GuiRenderer {
     pop()
     for (let i = 0; i < this.menuButtonNames.length; i++) {
       push()
-      // Calculate the hover animation offset
       let buttonName = this.menuButtonNames[i]
-      let mouseIsHovered = false;
-      let distFromLeft = this.menuButtons[buttonName].distFromLeft; // Distance from right of the screen
-      let distFromTop = this.menuButtons[buttonName].distFromTop
-      let buttonX = (-wWidth / 16) + distFromLeft; // X position of the button
-      let buttonY = (-wHeight / 16) + distFromTop; // Y position of the button
-      let buttonWidth = this.menuButtons[buttonName].buttonWidth; // Approximate width of the button
-      let buttonHeight = this.menuButtons[buttonName].buttonHeight; // Approximate height of the button   
+      let mouseIsHovered = false; // Whether the mouse is hovering over the button
+      let distFromLeft = this.menuButtons[buttonName].distFromLeft*this.guiScale; // Distance from right of the screen
+      let distFromTop = this.menuButtons[buttonName].distFromTop*this.guiScale
+      let buttonX = ((-wWidth / 16) + distFromLeft); // X position of the button
+      let buttonY = ((-wHeight / 16) + distFromTop) + i*1; // Y position of the button
+      let buttonWidth = this.menuButtons[buttonName].buttonWidth*this.guiScale; // Approximate width of the button
+      let buttonHeight = this.menuButtons[buttonName].buttonHeight*this.guiScale; // Approximate height of the button   
 
       let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
       // Check if the mouse is within the button bounds
       if (
-        mouseCoords.x > buttonX - buttonWidth / 2 &&
-        mouseCoords.x < buttonX + buttonWidth / 2 &&
-        mouseCoords.y > buttonY - buttonHeight / 2 &&
-        mouseCoords.y < buttonY + buttonHeight / 2
+      mouseCoords.x > buttonX - buttonWidth / 2 &&
+      mouseCoords.x < buttonX + buttonWidth / 2 &&
+      mouseCoords.y > buttonY - buttonHeight / 2 &&
+      mouseCoords.y < buttonY + buttonHeight / 2
       ) {
-        mouseIsHovered = true;
+      mouseIsHovered = true; //If the mouse is hovering over the button, set mouseIsHovered to true
       }
+
       // Calculate the hover animation offset
       let maxOffset = 5;
       let lerpTime = 0.5
       if (mouseIsHovered) {
-        if (!this.menuButtons[buttonName].hoverStartTime) {
+        if (!this.menuButtons[buttonName].hoverStartTime) { //If the button has not been hovered over before, set the hoverStartTime to the current frameCount
           this.menuButtons[buttonName].hoverStartTime = frameCount;
         }
-        let hoverDuration = frameCount - this.menuButtons[buttonName].hoverStartTime;
+        let hoverDuration = frameCount - this.menuButtons[buttonName].hoverStartTime; //Difference betwen now and start time
         if (hoverDuration / 100 > lerpTime) {
-          hoverDuration = lerpTime * 100;
+          hoverDuration = lerpTime * 100; //If it's over the lerpTime, set it to the lerpTime
         }
-        this.menuButtons[buttonName].hoverOffset = easeOutSine(hoverDuration / 100, 0, maxOffset, lerpTime);
-        this.menuButtons[buttonName].lastHovered = frameCount;
-        this.menuButtons[buttonName].peak = this.menuButtons[buttonName].hoverOffset;
+        this.menuButtons[buttonName].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime); //Actually do the calculation
+        this.menuButtons[buttonName].lastHovered = frameCount; //Set the lastHovered to the current frameCount
+        this.menuButtons[buttonName].peak = this.menuButtons[buttonName].hoverOffset; //Set the peak to the current hoverOffset
       } else {
-        this.menuButtons[buttonName].hoverStartTime = null;
+        this.menuButtons[buttonName].hoverStartTime = null; //Delete hoverStartTime attribute
         let pos = 0;
         if (this.menuButtons[buttonName].hoverOffset > 0) {
-          let returnDuration = frameCount - this.menuButtons[buttonName].lastHovered;
+          let returnDuration = frameCount - this.menuButtons[buttonName].lastHovered; //Calculate how long to interpolate betweem the peak and 0
           if (returnDuration / 100 > lerpTime) {
             pos = lerpTime;
           } else {
             pos = returnDuration / 100;
           }
-          this.menuButtons[buttonName].hoverOffset = this.menuButtons[buttonName].peak - easeOutSine(pos, 0, this.menuButtons[buttonName].peak, lerpTime);
+          this.menuButtons[buttonName].hoverOffset = this.menuButtons[buttonName].peak - easeOutElastic(pos, 0, this.menuButtons[buttonName].peak, lerpTime);
         } else {
           this.menuButtons[buttonName].peak = null
         }
       }
 
       // Text Shadow
-      fill(0)
       textAlign(LEFT)
-      let downOffSet = 2
-      translate(this.menuButtons[buttonName].hoverOffset, 0, 0)
+      let downOffSet = 2*this.guiScale
+      translate(this.menuButtons[buttonName].hoverOffset, 0, 0) //Translate the button based on the hoverOffset
       translate((buttonX + 0.5) - buttonWidth / 2, buttonY + 0.5 + downOffSet, 0) //Small offset due to hitbox being off cuz shadow
-      text(this.menuButtons[buttonName].text, 0, 0)
-
-      // Real text
-      fill(255)
-      translate(-0.5, -0.5, 0)
-      text(this.menuButtons[buttonName].text, 0, 0)
+      textWithShadow(this.menuButtons[buttonName].text, 0, 0)
       pop()
     }
 
     pop()
-  }
+    }
+
+    renderDebugOverlay() {
+      let wHeight = this.height
+      let wWidth = this.width
+      this.setCamera(100)
+      push()
+      translate(wWidth / 16 - 65*this.guiScale, -wHeight / 16 + 60*this.guiScale, 0);
+      scale(this.guiScale)
+      fill(255)
+      textAlign(RIGHT)
+      textWithShadow("[DEBUG]\nFPS: " + fps + "\nCamTilt: " + "n/a" + "\nPan: " + "n/a" + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (wWidth/16)*0.5, (-wHeight/16)*0.8)
+      pop()
+    }
 
     clickGUIButton(x, y) {
-      ellipse(x, y, 5)
       let buttonName = null;
       for (let i = 0; i < this.menuButtonNames.length; i++) {
-        let buttonX = (-this.width / 16) + this.menuButtons[this.menuButtonNames[i]].distFromLeft; // X position of the button
-        let buttonY = (-this.height / 16) + this.menuButtons[this.menuButtonNames[i]].distFromTop; // Y position of the button
-        let buttonWidth = this.menuButtons[this.menuButtonNames[i]].buttonWidth; // Approximate width of the button
-        let buttonHeight = this.menuButtons[this.menuButtonNames[i]].buttonHeight; // Approximate height of the button
+        let buttonX = (-this.width / 16) + this.menuButtons[this.menuButtonNames[i]].distFromLeft*this.guiScale; // X position of the button
+        let buttonY = (-this.height / 16) + this.menuButtons[this.menuButtonNames[i]].distFromTop*this.guiScale; // Y position of the button
+        let buttonWidth = this.menuButtons[this.menuButtonNames[i]].buttonWidth*this.guiScale; // Approximate width of the button
+        let buttonHeight = this.menuButtons[this.menuButtonNames[i]].buttonHeight*this.guiScale; // Approximate height of the button
         if (
             x > buttonX - buttonWidth / 2 &&
             x < buttonX + buttonWidth / 2 &&
@@ -389,6 +461,8 @@ class GuiRenderer {
         switch (buttonName) {
           case "createARoom":
             console.log("createARoom")
+            this.setScreen("game")
+            createRoom()
             break
           case "joinARoom":
             console.log("createARoom")
@@ -403,8 +477,8 @@ class GuiRenderer {
       }
     }
     
+  
 }
-
 
 
 
