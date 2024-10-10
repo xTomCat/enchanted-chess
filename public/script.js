@@ -18,6 +18,7 @@ let timeUntilLeaving = null
 let cam
 let guiRenderer
 let framesSinceMouseMoved = 0
+let fps = 0
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -57,7 +58,6 @@ function setup() {
   p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
   //chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
-  
   console.log(cam)
   gl = this._renderer.GL;
   gl.enable(gl.CULL_FACE);
@@ -191,25 +191,29 @@ function joinGameByRoomCode() {
   }
 }
 
-function easeOutSine (t, b, c, d) {
-  var s = 1.70158;
-  var p = 0;
-  var a = c;
+function easeOutElastic (t, b, c, d) {
+  let s = 1.70158;
+  let p = 0;
+  let a = c;
   if (t == 0) return b;
   if ((t /= d) == 1) return b + c;
   if (!p) p = d * .3;
   if (a < Math.abs(c)) {
       a = c;
-      var s = p / 4;
+      s = p / 4;
   }
-  else var s = p / (2 * Math.PI) * Math.asin(c / a);
+  else s = p / (2 * Math.PI) * Math.asin(c / a);
   return a * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
 }
+
 
 function draw() {
   framesSinceMouseMoved++
   background(100)
   guiRenderer.renderBackground()
+  if (frameCount % 60 == 0) {
+    fps = round(frameRate())
+  }
   //push()
   //noStroke()
   //// Pass time uniform
@@ -237,12 +241,16 @@ function draw() {
           //cam._orbit(0.005, 0, 0)
           break orbit;
         }
+        else {
+          orbitControl()
+          if (chessBoard) {
+            chessBoard.renderBoard()
+          }
+        }
     }
   }
   push()
-  if (chessBoard) {
-    chessBoard.renderBoard()
-  }
+
   pop()
   push()
   guiRenderer.renderGUI()
@@ -252,9 +260,12 @@ function draw() {
 function windowResized() {
   resizeCanvas(windowWidth-15, windowHeight-15);
   if (guiRenderer) {
-    guiRenderer.width = windowWidth
-    guiRenderer.height = windowHeight
-  }
+    guiRenderer.width = windowWidth;
+    guiRenderer.height = windowHeight;
+    const baseWidth = 1920;
+    const baseHeight = 1080;
+    guiRenderer.guiScale = Math.min(guiRenderer.width / baseWidth, guiRenderer.height / baseHeight);
+}
 }
 
 
@@ -339,4 +350,11 @@ function worldToBoardIndices(worldX, worldZ, chessBoardObject) {
   } else {
     return null;
   }
+}
+
+function textWithShadow(string, x, y) {
+  fill(0)
+  text(string, x + 0.5, y + 0.5)
+  fill(255)
+  text(string, x, y)
 }

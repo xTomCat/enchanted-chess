@@ -272,7 +272,7 @@ class Chessboard {
       if (guiRenderer.getState() == "menu") {
       translate(this.height * this.tileSize / 2, 0, 0);
       rotateY(this.rotAngle);
-      this.rotAngle += 0.005;
+      this.rotAngle += 0.002;
       }
     }
     gl.cullFace(gl.FRONT)
