@@ -85,6 +85,10 @@ function setup() {
     let roomCloseButton = createButton('Close room')
     roomCloseButton.position(8, windowHeight-88)
     roomCloseButton.mousePressed(closeRoom)
+    if (guiRenderer) {
+      guiRenderer.setScreen("game")
+    }
+    
 
   })
 
@@ -296,6 +300,11 @@ function keyPressed() {
       debug = true
     }
     
+  }
+  if (key === 'r') {
+    if (guiRenderer) {
+      guiRenderer.damage(10)
+    }
   }
 
 }

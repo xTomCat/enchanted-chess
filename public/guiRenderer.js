@@ -10,6 +10,12 @@ class GuiRenderer {
         const baseWidth = 1920;
         const baseHeight = 1080;
         this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
+        this.healthBarTestMax = 100
+        this.healthBarAmount = 100
+        this.isTakingDamage = false
+        this.storedDamage = 0
+        this.takenDamageFrame = 0
+        this.prevHealthBarAmount = 100
 
         this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options"]
         this.menuButtons = {
@@ -414,6 +420,8 @@ class GuiRenderer {
         } else {
           this.menuButtons[buttonName].peak = null
         }
+
+
       }
 
       // Text Shadow
@@ -428,16 +436,17 @@ class GuiRenderer {
     pop()
     }
 
+
     renderDebugOverlay() {
       let wHeight = this.height
       let wWidth = this.width
       this.setCamera(100)
       push()
-      translate(wWidth / 16 - 65*this.guiScale, -wHeight / 16 + 60*this.guiScale, 0);
+      translate(wWidth / 16 - 65*this.guiScale, -wHeight / 16 + 30*this.guiScale, 0);
       scale(this.guiScale)
       fill(255)
       textAlign(RIGHT)
-      textWithShadow("[DEBUG]\nFPS: " + fps + "\nCamTilt: " + "n/a" + "\nPan: " + "n/a" + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (wWidth/16)*0.5, (-wHeight/16)*0.8)
+      //textWithShadow("[DEBUG]\nFPS: " + fps + "\nCamTilt: " + "n/a" + "\nPan: " + "n/a" + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (wWidth/16)*0.5, (-wHeight/16)*0.8)
       pop()
     }
 
@@ -465,6 +474,7 @@ class GuiRenderer {
             break
           case "joinARoom":
             console.log("createARoom")
+            joinGameByRoomCode()
             break
           case "cardDeck":
             console.log("createARoom")
