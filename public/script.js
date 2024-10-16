@@ -87,6 +87,10 @@ function setup() {
     let roomCloseButton = createButton('Close room')
     roomCloseButton.position(8, windowHeight-88)
     roomCloseButton.mousePressed(closeRoom)
+    if (guiRenderer) {
+      guiRenderer.setScreen("game")
+    }
+    
 
   })
 
@@ -176,6 +180,7 @@ function closeRoom() {
 
 function createRoom() {
   socket.emit('createRoom')
+  guiRenderer.setScreen("game")
 }
 
 function promptNickName() {
@@ -243,16 +248,12 @@ function draw() {
           //cam._orbit(0.005, 0, 0)
           break orbit;
         }
-        else {
-          orbitControl()
-          if (chessBoard) {
-            chessBoard.renderBoard()
-          }
-        }
     }
   }
   push()
-
+  if (chessBoard) {
+    chessBoard.renderBoard()
+  }
   pop()
   push()
   guiRenderer.renderGUI()
@@ -301,6 +302,11 @@ function keyPressed() {
       debug = true
     }
     
+  }
+  if (key === 'r') {
+    if (guiRenderer) {
+      guiRenderer.damage(10)
+    }
   }
 
 }
