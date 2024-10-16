@@ -6,7 +6,12 @@ class GuiRenderer {
         this.currentScreen = ["menu"]
         this.menuChessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
         this.menuChessBoard.populateBoard()
+        this.guiScale = 1
+        this.guiRendererCanvas = createGraphics(width, height)
 
+        const baseWidth = 1920;
+        const baseHeight = 1080;
+        this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
 
         this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options"]
         this.menuButtons = {
@@ -206,19 +211,47 @@ class GuiRenderer {
       let bounceOffset = sin((frameCount * bounceSpeed) + (i * PI / 4)) * bounceHeight;
       translate(10*this.guiScale, 0, 0);
       push();
-      translate(-wWidth / 16, -wHeight / 16 + 20, 0);
-      for (let i = 0; i < this.menuLetters.length; i++) {
-        let bounceOffset = sin((frameCount * bounceSpeed) + ((i) * PI / 4)) * bounceHeight;
-        let yOffset = 20
-        let rowIndex
-        if (i > this.topLetters) {
-          yOffset = 45
-          rowIndex = i - this.topLetters
-          
-        } else if (i == this.topLetters) {
-          yOffset = 45
-          rowIndex = i - this.topLetters
-          translate((-wWidth/16) + 10 * (this.topLetters-1 - this.bottomLetters-1) ,25, 0);
+      let mouseIsHovered = false;
+      let letterX = (-wWidth / 16) + (10 * (i + 1)); // X position of the letter
+      let letterY = (-wHeight / 16) + 20; // Y position of the letter
+      let letterWidth = (this.letterWidth * 0.1); // Approximate width of the letter
+      let letterHeight = (this.letterHeight * 0.1); // Approximate height of the letter
+      let maxOffset = 20;
+      let lerpTime = 0.5;
+
+      let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
+      // Check if the mouse is within the letter bounds
+      if (
+        mouseCoords.x > letterX - letterWidth / 2 &&
+        mouseCoords.x < letterX + letterWidth / 2 &&
+        mouseCoords.y > letterY - letterHeight / 2 &&
+        mouseCoords.y < letterY + letterHeight / 2
+      ) {
+        mouseIsHovered = true;
+      }
+
+      if (mouseIsHovered) {
+        if (!this.menuLetters[i].hoverStartTime) {
+        this.menuLetters[i].hoverStartTime = frameCount;
+        }
+        let hoverDuration = frameCount - this.menuLetters[i].hoverStartTime;
+        if (hoverDuration / 100 > lerpTime) {
+        hoverDuration = lerpTime * 100;
+        }
+        this.menuLetters[i].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime);
+        this.menuLetters[i].lastHovered = frameCount;
+        this.menuLetters[i].peak = this.menuLetters[i].hoverOffset;
+      } else {
+        this.menuLetters[i].hoverStartTime = null;
+        let pos = 0;
+        if (this.menuLetters[i].hoverOffset > 0) {
+        let returnDuration = frameCount - this.menuLetters[i].lastHovered;
+        if (returnDuration / 100 > lerpTime) {
+          pos = lerpTime;
+        } else {
+          pos = returnDuration / 100;
+        }
+        this.menuLetters[i].hoverOffset = this.menuLetters[i].peak - easeOutElastic(pos, 0, this.menuLetters[i].peak, lerpTime);
         } else {
         this.menuLetters[i].peak = null;
         }
@@ -383,8 +416,6 @@ class GuiRenderer {
         } else {
           this.menuButtons[buttonName].peak = null
         }
-
-
       }
 
       // Text Shadow
@@ -397,7 +428,34 @@ class GuiRenderer {
     }
 
     pop()
+    }
+
+  renderMenuNew() {
+    this.guiRendererCanvas.clear()
+    this.guiRendererCanvas.background(100)
+    fill(255)
+    this.guiRendererCanvas.text("Menu", 0, 0)
+    this.guiRendererCanvas.ellipse(0,0,10,10)
+    this.guiRendererCanvas.ellipse(this.width/2, this.height/2, 10, 10) // mid
+    this.guiRendererCanvas.ellipse(this.width, 0, 10, 10) // Top-right corner
+    this.guiRendererCanvas.ellipse(0, this.height, 10, 10) // Bottom-left corner
+    this.guiRendererCanvas.ellipse(this.width, this.height, 10, 10) // Bottom-right corner
+    scale(0.2)
+    image(this.guiRendererCanvas, -this.width/2, -this.height/2, this.width/2, this.height/2)
   }
+
+    renderDebugOverlay() {
+      let wHeight = this.height
+      let wWidth = this.width
+      this.setCamera(100)
+      push()
+      translate(wWidth / 16 - 65*this.guiScale, -wHeight / 16 + 60*this.guiScale, 0);
+      scale(this.guiScale)
+      fill(255)
+      textAlign(RIGHT)
+      textWithShadow("[DEBUG]\nFPS: " + fps + "\nCamTilt: " + "n/a" + "\nPan: " + "n/a" + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (wWidth/16)*0.5, (-wHeight/16)*0.8)
+      pop()
+    }
 
     clickGUIButton(x, y) {
       let buttonName = null;
@@ -419,10 +477,11 @@ class GuiRenderer {
         switch (buttonName) {
           case "createARoom":
             console.log("createARoom")
+            this.setScreen("game")
+            createRoom()
             break
           case "joinARoom":
             console.log("createARoom")
-            joinGameByRoomCode()
             break
           case "cardDeck":
             console.log("createARoom")
