@@ -19,6 +19,7 @@ let cam
 let guiRenderer
 let framesSinceMouseMoved = 0
 let fps = 0
+let canvas2d
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -40,8 +41,8 @@ function preload() {
 
 function setup() {
   socket = io()
-  createCanvas(windowWidth-15, windowHeight-15)
-  canvas3d = createCanvas(windowWidth-15, windowHeight-15, WEBGL)
+  createCanvas(windowWidth-15, windowHeight-15, WEBGL)
+  canvas2d = createGraphics(windowWidth-15, windowHeight-15)
   console.log(_renderer)
   //let joinRoomButton = createButton('Join a room')
   //let nickNameButton = createButton('Choose your nickname')
@@ -236,8 +237,10 @@ function draw() {
   ambientLight(128, 128, 128);
   directionalLight(128, 128, 128, 0, 1, 0);
   lightFalloff(1, 0, 0)
+
   orbit: if(!mousePressedInBoard){
     if (guiRenderer) {
+      console.log("state: " + guiRenderer.getState())
         if (guiRenderer.getState() == "menu") {
           //cam.lookAt(50, 0, 0)
           //cam._orbit(0.005, 0, 0)
@@ -252,9 +255,6 @@ function draw() {
     }
   }
   push()
-
-  pop()
-  push()
   guiRenderer.renderGUI()
   //guiRenderer.guiRendererCanvas.clear()
   //image(guiRenderer.guiRendererCanvas, 0, 0, windowWidth-15, windowHeight-15)
@@ -263,9 +263,10 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(windowWidth-15, windowHeight-15);
+  canvas2d.resizeCanvas(windowWidth-15, windowHeight-15)
   if (guiRenderer) {
-    guiRenderer.width = windowWidth;
-    guiRenderer.height = windowHeight;
+    guiRenderer.width = windowWidth-15;
+    guiRenderer.height = windowHeight-15;
     const baseWidth = 1920;
     const baseHeight = 1080;
     guiRenderer.guiScale = Math.min(guiRenderer.width / baseWidth, guiRenderer.height / baseHeight);
@@ -315,7 +316,7 @@ function mousePressed() {
     mousePressedInBoard = false
   }
 }
-mouseClickedLoc = mouseToHUDCoords(mouseX, mouseY)
+mouseClickedLoc = {x: mouseX, y: mouseY}
 console.log(mouseClickedLoc)
 if (guiRenderer) {
   guiRenderer.clickGUIButton(mouseClickedLoc.x, mouseClickedLoc.y)
@@ -354,6 +355,13 @@ function worldToBoardIndices(worldX, worldZ, chessBoardObject) {
   } else {
     return null;
   }
+}
+
+function textWithShadow2dCanvas(string, x, y) {
+  canvas2d.fill(0)
+  canvas2d.text(string, x + 4, y + 4)
+  canvas2d.fill(255)
+  canvas2d.text(string, x, y)
 }
 
 function textWithShadow(string, x, y) {

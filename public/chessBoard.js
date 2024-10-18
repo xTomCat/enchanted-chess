@@ -270,7 +270,7 @@ class Chessboard {
     push()
     if (guiRenderer) {
       if (guiRenderer.getState() == "menu") {
-      canvas3d.translate(this.height * this.tileSize / 2, 0, 0);
+      translate(this.height * this.tileSize / 2, 0, 0);
       rotateY(this.rotAngle);
       this.rotAngle += 0.002;
       }

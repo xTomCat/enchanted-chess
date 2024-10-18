@@ -1,3 +1,4 @@
+
 class GuiRenderer {
     constructor(width, height, cam) {
         this.width = width
@@ -15,10 +16,10 @@ class GuiRenderer {
 
         this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options"]
         this.menuButtons = {
-          createARoom: {hoverOffset: 0, lastHovered: 0, distFromLeft: 20, distFromTop: 65, buttonWidth: 30, buttonHeight: 7, text: "Create a room"},
-          joinARoom: {hoverOffset: 0, lastHovered: 0, distFromLeft: 20, distFromTop: 72, buttonWidth: 30, buttonHeight: 7, text: "Join a room"},
-          cardDeck: {hoverOffset: 0, lastHovered: 0, distFromLeft: 20, distFromTop: 79, buttonWidth: 30, buttonHeight: 7, text: "Edit deck"},
-          options: {hoverOffset: 0, lastHovered: 0, distFromLeft: 20, distFromTop: 86, buttonWidth: 30, buttonHeight: 7, text: "Options"}
+          createARoom: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 630, buttonWidth: 600, buttonHeight: 40, text: "Create a room"},
+          joinARoom: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 700, buttonWidth: 470, buttonHeight: 40, text: "Join a room"},
+          cardDeck: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 770, buttonWidth: 380, buttonHeight: 40, text: "Edit deck"},
+          options: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 840, buttonWidth: 330, buttonHeight: 40, text: "Options"}
         }
         
         this.menuLetters = []
@@ -103,7 +104,9 @@ class GuiRenderer {
           break
       }
       if (debug) {
+        canvas2d.clear()
         this.renderDebugOverlay()
+        pop()
       }
     }
 
@@ -114,57 +117,55 @@ class GuiRenderer {
     renderGameUI() {
       let wHeight = this.height
       let wWidth = this.width
+      canvas2d.clear()
       this.setCamera(100)
-      push()
-        fill(150)
-        rectMode(CENTER)
-        fill(100)
-        rect(0, (wHeight/16)*0.85, wWidth/16, wHeight/48)
-      pop()
-      push()
-        fill(255)
-        textAlign(LEFT)
-        stroke(0)
-        textWithShadow("Name: " + nickname + "\nColor: " + color, (wWidth/16)*0.52, (wHeight/16)*0.80)
-        noStroke()
-      pop()
-      if (debug) {
-        
-      }
+      //canvas2d.push()
+      //  canvas2d.fill(150)
+      //  canvas2d.rectMode(CENTER)
+      //  canvas2d.fill(100)
+      //  canvas2d.rect(0, (wHeight/16)*0.85, wWidth/16, wHeight/48)
+      //canvas2d.pop()
+      canvas2d.push()
+        canvas2d.fill(255)
+        canvas2d.textAlign(LEFT)
+        canvas2d.stroke(0)
+        textWithShadow2dCanvas("Name: " + nickname + "\nColor: " + color, this.width*0.02, this.height*0.90)
+        canvas2d.noStroke()
+      canvas2d.pop()
       if (gameData) {
         const players = gameData.players
-        push()
-          fill(255)
-          textAlign(LEFT)
-          textWithShadow("You're in a room! Code: " + gameData.roomCode, -(wWidth/16)*0.9, (-wHeight/16)*0.8)
+        canvas2d.push()
+          canvas2d.fill(255)
+          canvas2d.textAlign(LEFT)
+          textWithShadow2dCanvas("You're in a room! Code: " + gameData.roomCode, this.width*0.02, this.height*0.1)
           if (players[0]) {
-            textWithShadow("Player 1: " + players[0].name, -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+10)
+            textWithShadow2dCanvas("Player 1: " + players[0].name, this.width*0.02, this.height*0.1+75)
           }
           if (players[1]) {
-            textWithShadow("Player 2: " + players[1].name, -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+20)
+            textWithShadow2dCanvas("Player 2: " + players[1].name, this.width*0.02, this.height*0.1+150)
           } else{
-            textWithShadow("Waiting for player 2...", -(wWidth/16)*0.9, ((-wHeight/16)*0.8)+20)
+            textWithShadow2dCanvas("Waiting for player 2...", this.width*0.02, this.height*0.1+150)
           }
-        pop()
+        canvas2d.pop()
         if (check && gameData.state == "started") {
-          push()
-          fill(255)
-          textAlign(CENTER)
-          textWithShadow(check + " is in check!", 0, (-wHeight/16)*0.85)
-          pop()
+          canvas2d.push()
+          canvas2d.fill(255)
+          canvas2d.textAlign(CENTER)
+          canvas2d.textWithShadow(check + " is in check!", 0, this.height*0.85)
+          canvas2d.pop()
       }
       }
-      push()
-        fill(255)
-        textAlign(CENTER)
+      canvas2d.push()
+        canvas2d.fill(255)
+        canvas2d.textAlign(CENTER)
         if (gameData) {
           if (gameData.state == "waiting") {
-            textWithShadow("Waiting for players...", 0, (wHeight/16)*0.5)
+            textWithShadow2dCanvas("Waiting for players...", this.width*0.5, this.height*0.7)
           } else if (gameData.state == "started") {
             if (gameData.turn == color) {
-              textWithShadow("It's your turn!", 0, (wHeight/16)*0.5)
+              textWithShadow2dCanvas("It's your turn!", this.width*0.5, this.height*0.7)
             } else if (gameData.turn != color) {
-              textWithShadow("It's the other player's turn!", 0, (wHeight/16)*0.5)
+              textWithShadow2dCanvas("It's the other player's turn!", this.width*0.5, this.height*0.7)
             }
           } else if (gameData.state == "checkmate" || "closing") {
             let winner 
@@ -173,53 +174,76 @@ class GuiRenderer {
             } else if (gameData.check == "black") {
               winner = "White"
             }
-            textWithShadow("Checkmate! " + winner + " wins!", 0, (wHeight/16)*0.5)
+            textWithShadow2dCanvas("Checkmate! " + winner + " wins!", this.width*0.5, this.height*0.7)
           }
       }
       if (timeUntilLeaving != null) {
-        push()
-        textWithShadow("Leaving room in: " + timeUntilLeaving, 0, (wHeight/16)*0.6)
-        pop()
+        canvas2d.push()
+        canvas2d.textWithShadow("Leaving room in: " + timeUntilLeaving, this.width*0.5, this.height*0.8)
+        canvas2d.pop()
       }
-      pop()
-      push()
+      canvas2d.pop()
+      canvas2d.push()
         //console.log(maxcamtilt, mincamtilt)
         // Clamp the camera's camtilt angle
-        textAlign(LEFT)
-        fill(255)
-      pop()
+        canvas2d.textAlign(LEFT)
+        canvas2d.fill(255)
+        canvas2d.pop()
       //ellipse(wWidth/16, wHeight/16, 5)
+      push()
+        scale(0.0621) //magic number. Why? nobody knows
+        image(canvas2d, -this.width, -this.height, (this.width), (this.height))
+        pop()
       pop()
     }
   renderMenu() {
     let wHeight = this.height
     let wWidth = this.width
+    let mouseCoords = {x: mouseX, y: mouseY};
+    canvas2d.textAlign(LEFT)
+    canvas2d.textSize(50)
     push()
     scale(this.guiScale)
+    this.cam.eyeY = -100
     this.menuChessBoard.renderBoard()
     pop()
     this.setCamera(100)
+      canvas2d.textFont(plunge)
+      canvas2d.imageMode(CENTER)
+      canvas2d.rectMode(CENTER)
+      canvas2d.clear()
+      //canvas2d.background(200)
+      
+      //canvas2d.rect(-this.width, -this.height, this.width, this.height)
+      //canvas2d.push()
+      //canvas2d.fill(255)
+      //canvas2d.ellipse(0, 0, 20)
+      //canvas2d.ellipse(0, canvas2d.height, 20)
+      //canvas2d.ellipse(canvas2d.width, 0, 20)
+      //canvas2d.ellipse(canvas2d.width, canvas2d.height, 20)
+      //canvas2d.ellipse(0, 0, 10, 10)
+      //canvas2d.pop()
 
     //Render menu logo letters
     let bounceSpeed = 0.05; // Speed of the bounce
-    let bounceHeight = 10; // Height of the bounce
+    let bounceHeight = 10*this.guiScale; // Height of the bounce
+    console.log("X: " + mouseCoords.x + " Y: " + mouseCoords.y)
 
     // Render top letters
-    push();
-    translate(-wWidth / 16, -wHeight / 16 + 20*this.guiScale, 0);
+    canvas2d.push();
+    //canvas2d.ellipse(0, 160 * this.guiscale)
+    //canvas2d.translate(0, 160*this.guiScale);
     for (let i = 0; i <= this.topLetters; i++) {
       let bounceOffset = sin((frameCount * bounceSpeed) + (i * PI / 4)) * bounceHeight;
-      translate(10*this.guiScale, 0, 0);
-      push();
+      //canvas2d.translate(100*this.guiScale, 0);
+      canvas2d.push();
       let mouseIsHovered = false;
-      let letterX = (-wWidth / 16) + (10 * (i + 1)); // X position of the letter
-      let letterY = (-wHeight / 16) + 20; // Y position of the letter
-      let letterWidth = (this.letterWidth * 0.1); // Approximate width of the letter
-      let letterHeight = (this.letterHeight * 0.1); // Approximate height of the letter
+      let letterX = ((100*this.guiScale) * (i+1)); // X position of the letter
+      let letterY = 180*this.guiScale; // Y position of the letter
+      let letterWidth = (this.letterWidth * this.guiScale); // Approximate width of the letter
+      let letterHeight = (this.letterHeight * this.guiScale); // Approximate height of the letter
       let maxOffset = 20;
       let lerpTime = 0.5;
-
-      let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
       // Check if the mouse is within the letter bounds
       if (
         mouseCoords.x > letterX - letterWidth / 2 &&
@@ -258,23 +282,37 @@ class GuiRenderer {
       }
 
       if (this.menuLetters[i].letter) {
-        noStroke();
-        scale(0.1*this.guiScale);
-        translate(0, bounceOffset - this.menuLetters[i].hoverOffset, 0);
-        texture(this.menuLetters[i].letter);
-        plane(this.letterWidth, this.letterHeight);
+        canvas2d.noStroke();
+        //canvas2d.scale(1*this.guiScale);
+        canvas2d.translate(0, bounceOffset - (this.menuLetters[i].hoverOffset*this.guiScale));
+        canvas2d.image(this.menuLetters[i].letter, letterX, letterY, this.letterWidth*this.guiScale, this.letterHeight*this.guiScale, 0, 0, this.letterWidth, this.letterHeight);
+        //canvas2d.ellipse(0, 0, 10)
+        //canvas2d.rect(letterX, letterY, letterWidth, letterHeight)
+        fill(0)
+        //canvas2d.texture(this.menuLetters[i].letter);
+        //canvas2d.plane(this.letterWidth, this.letterHeight);
       }
-      pop();
+      canvas2d.pop();
+      
     }
-    pop();
+    canvas2d.pop();
 
-    // Render bottom letters
-    push();
-    translate(-wWidth / 16, -wHeight / 16 + 45*this.guiScale, 0);
+    //Render bottom letters NEW
+    canvas2d.push();
+    //canvas2d.ellipse(0, 160 * this.guiscale)
+    //canvas2d.translate(0, 160*this.guiScale);
     for (let i = this.topLetters + 1; i < this.menuLetters.length; i++) {
       let bounceOffset = sin((frameCount * bounceSpeed) + ((i - this.topLetters) * PI / 4)) * bounceHeight;
-      translate(10*this.guiScale, 0, 0);
-      push();
+      //canvas2d.translate(100*this.guiScale, 0);
+      canvas2d.push();
+      let mouseIsHovered = false;
+      let letterX = ((100*this.guiScale) * ((i - this.topLetters))); // X position of the letter
+      let letterY = 440*this.guiScale; // Y position of the letter
+      let letterWidth = (this.letterWidth * this.guiScale); // Approximate width of the letter
+      let letterHeight = (this.letterHeight * this.guiScale); // Approximate height of the letter
+      let maxOffset = 20;
+      let lerpTime = 0.5;
+      /*
       let mouseIsHovered = false;
       let letterX = (-wWidth / 16) + (10 * (i - this.topLetters)*this.guiScale); // X position of the letter
       let letterY = (-wHeight / 16) + 45*this.guiScale; // Y position of the letter
@@ -282,8 +320,7 @@ class GuiRenderer {
       let letterHeight = (this.letterHeight * 0.1)*this.guiScale; // Approximate height of the letter
       let maxOffset = 20;
       let lerpTime = 0.5;
-
-      let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
+      */
       // Check if the mouse is within the letter bounds
       if (
         mouseCoords.x > letterX - letterWidth / 2 &&
@@ -293,7 +330,6 @@ class GuiRenderer {
       ) {
         mouseIsHovered = true;
       }
-
       if (mouseIsHovered) {
         if (!this.menuLetters[i].hoverStartTime) {
         this.menuLetters[i].hoverStartTime = frameCount;
@@ -322,91 +358,98 @@ class GuiRenderer {
       }
 
       if (this.menuLetters[i].letter) {
-        noStroke();
-        scale(0.1*this.guiScale);
-        translate(0, bounceOffset - this.menuLetters[i].hoverOffset, 0);
-        texture(this.menuLetters[i].letter);
-        plane(this.letterWidth, this.letterHeight);
+        canvas2d.noStroke();
+        //canvas2d.scale(1*this.guiScale);
+        canvas2d.translate(0, bounceOffset - (this.menuLetters[i].hoverOffset*this.guiScale));
+        canvas2d.image(this.menuLetters[i].letter, letterX, letterY, this.letterWidth*this.guiScale, this.letterHeight*this.guiScale, 0, 0, this.letterWidth, this.letterHeight);
+        //canvas2d.ellipse(0, 0, 10)
+        //canvas2d.rect(letterX, letterY, letterWidth, letterHeight)
+        fill(0)
+        //canvas2d.texture(this.menuLetters[i].letter);
+        //canvas2d.plane(this.letterWidth, this.letterHeight);
       }
-      pop();
+      canvas2d.pop();
+      
     }
-    pop();
+    canvas2d.pop();
 
     //Render the card logo
-    push();
-    noStroke();
-    translate(-wWidth / 16 - 10*this.guiScale, -wHeight / 16 + 45*this.guiScale, 0);
-    let bounceOffset = sin((frameCount * bounceSpeed) + (16 * PI / 4)) * bounceHeight;
-    translate(80*this.guiScale, 0, 0); // Distance from right of the screen
-    scale(0.04*this.guiScale);
-    translate(0, bounceOffset * 2.5, 0);
+    canvas2d.push();
+    canvas2d.noStroke();
+    //let bounceOffset = sin((frameCount * bounceSpeed) + ((i - this.topLetters) * PI / 4)) * bounceHeight;
+    let bounceOffset = sin((frameCount * bounceSpeed) + ((this.topLetters + this.bottomLetters) * PI / 4)) * bounceHeight; // Bounce offset for the card
+    canvas2d.translate((100*(this.bottomLetters+1.5))*this.guiScale, (this.letterHeight*1.8)*this.guiScale, 0); // Distance from right and top of the screen
+    canvas2d.translate(0, bounceOffset * 2.5, 0);
     let rotationOffset = sin((frameCount * bounceSpeed) + (16 * PI / 4)) * 0.05; // Rotation offset for slight rotation
-    push();
-    rotate(PI / 16 + rotationOffset);
-    fill(0, 0, 0);
-    translate(0, bounceOffset * 1.5, 0);
-    rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
-    pop();
-    push();
-    rotate(PI / 10 + rotationOffset);
-    translate(35*this.guiScale, -30*this.guiScale, 0);
-    fill(0, 0, 0);
-    rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
-    texture(backofcard);
-    plane(backofcard.width, backofcard.height);
-    pop();
+    canvas2d.scale(0.4*this.guiScale)
+    canvas2d.push();
+    canvas2d.rotate(PI / 16 + rotationOffset);
+    canvas2d.fill(0, 0, 0);
+    canvas2d.translate(0, bounceOffset * 1.5, 0);
+    canvas2d.rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
+    canvas2d.pop();
 
-    push();
-    translate(0, bounceOffset * 1.5, 0);
-    rotate(PI / 16 + rotationOffset);
+    canvas2d.push();
+    canvas2d.fill(0, 0, 0);
+    canvas2d.rotate(PI / 10 + rotationOffset);
+    canvas2d.translate(35*this.guiScale, -30*this.guiScale, 0);
+    canvas2d.rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
+    canvas2d.image(backofcard, 0, 0, backofcard.width, backofcard.height);
+    canvas2d.pop();
 
-    texture(backofcard);
-    plane(backofcard.width, backofcard.height);
-    pop();
+    canvas2d.push();
+    canvas2d.rotate(PI / 16 + rotationOffset);
+    canvas2d.image(backofcard, 0, bounceOffset * 1.5, backofcard.width, backofcard.height);
+    canvas2d.pop();
 
     //Render menu buttons
-    pop()
+    canvas2d.pop()
+    translate(0, 0)
     for (let i = 0; i < this.menuButtonNames.length; i++) {
-      push()
+      canvas2d.push()
       let buttonName = this.menuButtonNames[i]
       let mouseIsHovered = false; // Whether the mouse is hovering over the button
-      let distFromLeft = this.menuButtons[buttonName].distFromLeft*this.guiScale; // Distance from right of the screen
-      let distFromTop = this.menuButtons[buttonName].distFromTop*this.guiScale
-      let buttonX = ((-wWidth / 16) + distFromLeft); // X position of the button
-      let buttonY = ((-wHeight / 16) + distFromTop) + i*1; // Y position of the button
-      let buttonWidth = this.menuButtons[buttonName].buttonWidth*this.guiScale; // Approximate width of the button
-      let buttonHeight = this.menuButtons[buttonName].buttonHeight*this.guiScale; // Approximate height of the button   
+      let distFromLeft = this.menuButtons[buttonName].distFromLeft; // Distance from left of the screen
+      let distFromTop = this.menuButtons[buttonName].distFromTop
+      let buttonX = distFromLeft*this.guiScale; // X position of the button
+      let buttonY = distFromTop*this.guiScale; // Y position of the button
+      let buttonWidth = this.menuButtons[buttonName].buttonWidth; // Approximate width of the button
+      let buttonHeight = this.menuButtons[buttonName].buttonHeight; // Approximate height of the button 
 
-      let mouseCoords = mouseToHUDCoords(mouseX, mouseY);
+      //canvas2d.rect(buttonX, buttonY, buttonWidth, buttonHeight)
+      //fill(0)
+      //canvas2d.ellipse(buttonX, buttonY, 10)
+      //fill(255)
+
       // Check if the mouse is within the button bounds
       if (
-      mouseCoords.x > buttonX - buttonWidth / 2 &&
-      mouseCoords.x < buttonX + buttonWidth / 2 &&
-      mouseCoords.y > buttonY - buttonHeight / 2 &&
-      mouseCoords.y < buttonY + buttonHeight / 2
+        mouseCoords.x > buttonX - buttonWidth / 2 &&
+        mouseCoords.x < buttonX + buttonWidth / 2 &&
+        mouseCoords.y > buttonY - buttonHeight / 2 &&
+        mouseCoords.y < buttonY + buttonHeight / 2
       ) {
-      mouseIsHovered = true; //If the mouse is hovering over the button, set mouseIsHovered to true
+        mouseIsHovered = true; // If the mouse is hovering over the button, set mouseIsHovered to true
       }
 
       // Calculate the hover animation offset
-      let maxOffset = 5;
+      let maxOffset = 30*this.guiScale;
       let lerpTime = 0.5
       if (mouseIsHovered) {
-        if (!this.menuButtons[buttonName].hoverStartTime) { //If the button has not been hovered over before, set the hoverStartTime to the current frameCount
+        if (!this.menuButtons[buttonName].hoverStartTime) { // If the button has not been hovered over before, set the hoverStartTime to the current frameCount
           this.menuButtons[buttonName].hoverStartTime = frameCount;
         }
-        let hoverDuration = frameCount - this.menuButtons[buttonName].hoverStartTime; //Difference betwen now and start time
+        let hoverDuration = frameCount - this.menuButtons[buttonName].hoverStartTime; // Difference between now and start time
         if (hoverDuration / 100 > lerpTime) {
-          hoverDuration = lerpTime * 100; //If it's over the lerpTime, set it to the lerpTime
+          hoverDuration = lerpTime * 100; // If it's over the lerpTime, set it to the lerpTime
         }
-        this.menuButtons[buttonName].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime); //Actually do the calculation
-        this.menuButtons[buttonName].lastHovered = frameCount; //Set the lastHovered to the current frameCount
-        this.menuButtons[buttonName].peak = this.menuButtons[buttonName].hoverOffset; //Set the peak to the current hoverOffset
+        this.menuButtons[buttonName].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime); // Actually do the calculation
+        this.menuButtons[buttonName].lastHovered = frameCount; // Set the lastHovered to the current frameCount
+        this.menuButtons[buttonName].peak = this.menuButtons[buttonName].hoverOffset; // Set the peak to the current hoverOffset
       } else {
-        this.menuButtons[buttonName].hoverStartTime = null; //Delete hoverStartTime attribute
+        this.menuButtons[buttonName].hoverStartTime = null; // Delete hoverStartTime attribute
         let pos = 0;
         if (this.menuButtons[buttonName].hoverOffset > 0) {
-          let returnDuration = frameCount - this.menuButtons[buttonName].lastHovered; //Calculate how long to interpolate betweem the peak and 0
+          let returnDuration = frameCount - this.menuButtons[buttonName].lastHovered; // Calculate how long to interpolate between the peak and 0
           if (returnDuration / 100 > lerpTime) {
             pos = lerpTime;
           } else {
@@ -419,13 +462,18 @@ class GuiRenderer {
       }
 
       // Text Shadow
-      textAlign(LEFT)
-      let downOffSet = 2*this.guiScale
-      translate(this.menuButtons[buttonName].hoverOffset, 0, 0) //Translate the button based on the hoverOffset
-      translate((buttonX + 0.5) - buttonWidth / 2, buttonY + 0.5 + downOffSet, 0) //Small offset due to hitbox being off cuz shadow
-      textWithShadow(this.menuButtons[buttonName].text, 0, 0)
-      pop()
+      canvas2d.textAlign(LEFT)
+      let downOffSet = 2 * this.guiScale
+      canvas2d.translate(this.menuButtons[buttonName].hoverOffset, 0, 0) // Translate the button based on the hoverOffset
+      canvas2d.translate(buttonX, buttonY + downOffSet, 0) // Align the button text
+      textWithShadow2dCanvas(this.menuButtons[buttonName].text, 0, 0)
+      canvas2d.pop()
     }
+
+    push()
+    scale(0.0621) //magic number. Why? nobody knows
+    image(canvas2d, -this.width, -this.height, (this.width), (this.height))
+    pop()
 
     pop()
     }
@@ -448,20 +496,24 @@ class GuiRenderer {
       let wHeight = this.height
       let wWidth = this.width
       this.setCamera(100)
+      canvas2d.push()
+      canvas2d.translate(this.width-100, 100);
+      canvas2d.scale(this.guiScale)
+      canvas2d.fill(255)
+      canvas2d.textAlign(RIGHT)
+      textWithShadow2dCanvas("[DEBUG]\nFPS: " + round(frameRate()), (wWidth/16)*0.5, (-wHeight/16)*0.8)
+      canvas2d.pop()
       push()
-      translate(wWidth / 16 - 65*this.guiScale, -wHeight / 16 + 60*this.guiScale, 0);
-      scale(this.guiScale)
-      fill(255)
-      textAlign(RIGHT)
-      textWithShadow("[DEBUG]\nFPS: " + fps + "\nCamTilt: " + "n/a" + "\nPan: " + "n/a" + "\nCamX: " + cam.eyeX + "\nCamY: " + cam.eyeY + "\nCamZ: " + cam.eyeZ + "\nUpX: " + cam.upX + "\nUpY: " + cam.upY + "\nUpZ: " + cam.upZ, (wWidth/16)*0.5, (-wHeight/16)*0.8)
+      scale(0.0621) //magic number. Why? nobody knows
+      image(canvas2d, -this.width, -this.height, (this.width), (this.height))
       pop()
     }
 
     clickGUIButton(x, y) {
       let buttonName = null;
       for (let i = 0; i < this.menuButtonNames.length; i++) {
-        let buttonX = (-this.width / 16) + this.menuButtons[this.menuButtonNames[i]].distFromLeft*this.guiScale; // X position of the button
-        let buttonY = (-this.height / 16) + this.menuButtons[this.menuButtonNames[i]].distFromTop*this.guiScale; // Y position of the button
+        let buttonX = this.menuButtons[this.menuButtonNames[i]].distFromLeft*this.guiScale; // X position of the button
+        let buttonY = this.menuButtons[this.menuButtonNames[i]].distFromTop*this.guiScale; // Y position of the button
         let buttonWidth = this.menuButtons[this.menuButtonNames[i]].buttonWidth*this.guiScale; // Approximate width of the button
         let buttonHeight = this.menuButtons[this.menuButtonNames[i]].buttonHeight*this.guiScale; // Approximate height of the button
         if (
