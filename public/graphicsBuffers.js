@@ -1,21 +1,28 @@
 class Button {
-    constructor(width, height, x, y, maxOffsetX = 0, maxOffsetY = 0, lerpTime = 0) {
+    constructor(width, height, x, y) {
         this.width = width;
         this.height = height;
-        this.maxOffsetX = maxOffsetX;
-        this.maxOffsetY = maxOffsetY;
-        this.lerpTime = lerpTime;
         this.x = x;
         this.y = y;
+        console.log(this.width, this.height, this.x, this.y)
         this.gBuffer = createGraphics(this.width, this.height);
+        this.maxOffsetX = 0
+        this.maxOffsetY = 0
+        this.lerpTime = 0
     }
 
     clearBuffer() {
         this.gBuffer.clear();
- }
+    }
 
     initIcon() {
         throw new Error('initIcon() must be implemented by subclass');
+    }
+
+    setHoverEffect(maxOffsetX, maxOffsetY, lerpTime) {
+        this.maxOffsetX = maxOffsetX
+        this.maxOffsetY = maxOffsetY
+        this.lerpTime = lerpTime
     }
 
     drawIcon(canvas, guiScale) {
@@ -28,7 +35,7 @@ class Button {
         let mouseCoords = { x: mouseX, y: mouseY }; // Get the mouse coordinates
         let maxOffsetX = this.maxOffsetX * guiScale;
         let maxOffsetY = this.maxOffsetY * guiScale;
-        let lerpTime = 0.5
+        let lerpTime = this.lerpTime
         // Check if the mouse is within the button bounds
         if (
             mouseCoords.x < buttonX + buttonWidth &&
@@ -48,9 +55,16 @@ class Button {
             if (hoverDuration / 100 > lerpTime) {
                 hoverDuration = lerpTime * 100; // If it's over the lerpTime, set it to the lerpTime
             }
-            this.hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime); // Actually do the calculation
+            if (maxOffsetX = 0) { 
+                this.hoverOffsetX = easeOutElastic(hoverDuration / 100, 0, maxOffsetX, lerpTime); // Actually do the calculation
+                this.peakX = this.hoverOffsetX; // Set the peak to the current hoverOffset 
+                }
+            if (maxOffsetY = 0) { 
+                this.hoverOffsetY = easeOutElastic(hoverDuration / 100, 0, maxOffsetY, lerpTime); 
+                this.peakY = this.hoverOffsetX; // Set the peak to the current hoverOffset
+                } // Actually do the calculation
+            
             this.lastHovered = frameCount; // Set the lastHovered to the current frameCount
-            this.peak = this.hoverOffset; // Set the peak to the current hoverOffset
         } else {
             this.hoverStartTime = null; // Delete hoverStartTime attribute
             let pos = 0;
@@ -61,15 +75,21 @@ class Button {
                 } else {
                     pos = returnDuration / 100;
                 }
-                this.hoverOffset = this.peak - easeOutElastic(pos, 0, this.peak, lerpTime);
+                if (this.peakX) {
+                    this.hoverOffsetX = this.peakX - easeOutElastic(pos, 0, this.peakX, lerpTime);
+                }
+                if (this.peakY) {
+                    this.hoverOffsetY = this.peakY - easeOutElastic(pos, 0, this.peakY, lerpTime);
+                }
             } else {
-                this.peak = null
+                this.peakX = null
+                this.peakY = null
             }
         }
 
         // Text Display for Menu Buttons
         let downOffSet = -3 * guiScale
-        canvas.translate(this.hoverOffset, 0, 0) // Translate the button based on the hoverOffset
+        canvas.translate(this.hoverOffsetX, this.hoverOffsetY, 0) // Translate the button based on the hoverOffset
         canvas.translate(buttonX, buttonY + downOffSet, 0) // Align the button text
         canvas.push()
         canvas.scale(guiScale)
@@ -97,6 +117,14 @@ class TextBuffer extends Button {
     initIcon() {
         const textWidth = this.text.length * this.size * 0.5; // Adjust width based on size and character width approximation
         const textHeight = this.size * 1.2; // Height is directly based on the size
+        console.log("TextBuffer Attributes:");
+        console.log("Text:", this.text);
+        console.log("Text Width:", textWidth);
+        console.log("Text Height:", textHeight);
+        console.log("Size:", this.size);
+        console.log("Align:", this.align);
+        //console.log("Buffer:", this.gBuffer);
+        console.log(textWidth, textHeight)
         this.gBuffer = createGraphics(textWidth, textHeight);
         this.gBuffer.textFont(plunge); //I'll change this if I ever need to use a different font.
         this.gBuffer.textSize(this.size);

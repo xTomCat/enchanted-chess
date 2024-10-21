@@ -15,14 +15,14 @@ class GuiRenderer {
         const baseHeight = 1080;
         this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
 
-        this.debugBuffer = new TextBuffer("[DEBUG] FPS: " + fps, 50, LEFT)
+        this.debugBuffer = new TextBuffer(50, 50, 50, 50, "[DEBUG] FPS: " + fps, 50, LEFT)
 
         this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options"]
         this.menuButtons = {
-          createARoom: new TextBuffer(600, 40, 50, 630, "Create a room", 50, LEFT),
-          joinARoom: new TextBuffer(470, 40, 50, 700, "Join a room", 50, LEFT),
-          cardDeck: new TextBuffer(380, 40, 50, 770, "Edit deck", 50, LEFT),
-          options: new TextBuffer(330, 40, 50, 840, "Options", 50, LEFT)
+          createARoom: new TextBuffer(600, 40, 50, 630, "Create a room", 50, LEFT).setHoverEffect(10, 0, 0.5),
+          joinARoom: new TextBuffer(470, 40, 50, 700, "Join a room", 50, LEFT).setHoverEffect(10, 0, 0.5),
+          cardDeck: new TextBuffer(380, 40, 50, 770, "Edit deck", 50, LEFT).setHoverEffect(10, 0, 0.5),
+          options: new TextBuffer(330, 40, 50, 840, "Options", 50, LEFT).setHoverEffect(10, 0, 0.5)
 
           //createARoom: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 630, buttonWidth: 600, buttonHeight: 40, text: "Create a room", textBuffer: new TextBuffer("Create a room", 50, LEFT)},
           //joinARoom: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 700, buttonWidth: 470, buttonHeight: 40, text: "Join a room", textBuffer: new TextBuffer("Join a room", 50, LEFT)},
@@ -30,13 +30,13 @@ class GuiRenderer {
           //options: {hoverOffset: 0, lastHovered: 0, distFromLeft: 50, distFromTop: 840, buttonWidth: 330, buttonHeight: 40, text: "Options",  textBuffer: new TextBuffer("Options", 50, LEFT)}
         };
 
-       const buttonsPerRow = 30;
-       const buttonSpacing = 5;
-       const buttonWidth = 330;
-       const buttonHeight = 10;
-       const startX = 50;
-       const startY = 50;
-
+      // const buttonsPerRow = 30;
+      // const buttonSpacing = 5;
+      // const buttonWidth = 330;
+      // const buttonHeight = 10;
+      // const startX = 50;
+      // const startY = 50;
+//
       //  for (let i = 0; i < 100; i++) {
       //    const row = Math.floor(i / buttonsPerRow);
       //    const col = i % buttonsPerRow;
@@ -80,7 +80,6 @@ class GuiRenderer {
           "card1", "card2", "card3", "card4", 
           "chatBox", "chatInput"]
         this.ingameGuiElements = {
-          {hamburgerMenu}
         }
 
 
@@ -453,70 +452,9 @@ class GuiRenderer {
     for (let i = 0; i < this.menuButtonNames.length; i++) {
       canvas2d.push()
       let buttonName = this.menuButtonNames[i]
-      let mouseIsHovered = false; // Whether the mouse is hovering over the button
-      let buttonX = this.menuButtons[buttonName].x*this.guiScale; // Distance from left of the screen
-      let buttonY = this.menuButtons[buttonName].y*this.guiScale;
-      let buttonWidth = this.menuButtons[buttonName].getGraphicsObject().width*this.guiScale; // Approximate width of the button
-      let buttonHeight = this.menuButtons[buttonName].getGraphicsObject().width*this.guiScale; // Approximate height of the button 
-      //canvas2d.rectMode(CENTER)
-
-
-      //canvas2d.rect(buttonX, buttonY, buttonWidth, buttonHeight)
-      //fill(0)
-      //canvas2d.ellipse(buttonX, buttonY, 10)
-      //fill(255)
-
-      // Check if the mouse is within the button bounds
-      if (
-        mouseCoords.x < buttonX + buttonWidth &&
-        mouseCoords.x > buttonX &&
-        mouseCoords.y < buttonY + buttonHeight &&
-        mouseCoords.y > buttonY
-      ) {
-        mouseIsHovered = true; // If the mouse is hovering over the button, set mouseIsHovered to true
-      }
-
-      // Calculate the hover animation offset
-      let maxOffset = 30*this.guiScale;
-      let lerpTime = 0.5
-      if (mouseIsHovered) {
-        if (!this.menuButtons[buttonName].hoverStartTime) { // If the button has not been hovered over before, set the hoverStartTime to the current frameCount
-          this.menuButtons[buttonName].hoverStartTime = frameCount;
-        }
-        let hoverDuration = frameCount - this.menuButtons[buttonName].hoverStartTime; // Difference between now and start time
-        if (hoverDuration / 100 > lerpTime) {
-          hoverDuration = lerpTime * 100; // If it's over the lerpTime, set it to the lerpTime
-        }
-        this.menuButtons[buttonName].hoverOffset = easeOutElastic(hoverDuration / 100, 0, maxOffset, lerpTime); // Actually do the calculation
-        this.menuButtons[buttonName].lastHovered = frameCount; // Set the lastHovered to the current frameCount
-        this.menuButtons[buttonName].peak = this.menuButtons[buttonName].hoverOffset; // Set the peak to the current hoverOffset
-      } else {
-        this.menuButtons[buttonName].hoverStartTime = null; // Delete hoverStartTime attribute
-        let pos = 0;
-        if (this.menuButtons[buttonName].hoverOffset > 0) {
-          let returnDuration = frameCount - this.menuButtons[buttonName].lastHovered; // Calculate how long to interpolate between the peak and 0
-          if (returnDuration / 100 > lerpTime) {
-            pos = lerpTime;
-          } else {
-            pos = returnDuration / 100;
-          }
-          this.menuButtons[buttonName].hoverOffset = this.menuButtons[buttonName].peak - easeOutElastic(pos, 0, this.menuButtons[buttonName].peak, lerpTime);
-        } else {
-          this.menuButtons[buttonName].peak = null
-        }
-      }
-
-      // Text Display for Menu Buttons
-      let downOffSet = -3 * this.guiScale
-      canvas2d.translate(this.menuButtons[buttonName].hoverOffset, 0, 0) // Translate the button based on the hoverOffset
-      canvas2d.translate(buttonX, buttonY + downOffSet, 0) // Align the button text
-      canvas2d.push()
-      canvas2d.scale(this.guiScale)
-      canvas2d.imageMode(CORNERS)
-      canvas2d.image(this.menuButtons[buttonName].textBuffer.gBuffer, 0, 0, 
-        this.menuButtons[buttonName].textBuffer.gBuffer.width, 
-        this.menuButtons[buttonName].textBuffer.gBuffer.height)
-      canvas2d.pop()
+      console.log(this.menuButtons[buttonName])
+      console.log(buttonName)
+      this.menuButtons[buttonName].drawIcon(canvas2d, this.guiScale)
       canvas2d.pop()
     }
 
