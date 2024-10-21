@@ -37,12 +37,14 @@ function preload() {
   title = loadImage('Assets/title.png');
   backofcard = loadImage('Assets/back of card transparent.png');
   menubackground = loadImage('Assets/background.png')
+
+  
 }
 
 function setup() {
   socket = io()
-  createCanvas(windowWidth-15, windowHeight-15, WEBGL)
-  canvas2d = createGraphics(windowWidth-15, windowHeight-15)
+  createCanvas(windowWidth, windowHeight, WEBGL)
+  canvas2d = createGraphics(windowWidth, windowHeight)
   console.log(_renderer)
   //let joinRoomButton = createButton('Join a room')
   //let nickNameButton = createButton('Choose your nickname')
@@ -240,7 +242,6 @@ function draw() {
 
   orbit: if(!mousePressedInBoard){
     if (guiRenderer) {
-      console.log("state: " + guiRenderer.getState())
         if (guiRenderer.getState() == "menu") {
           //cam.lookAt(50, 0, 0)
           //cam._orbit(0.005, 0, 0)
@@ -262,11 +263,13 @@ function draw() {
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth-15, windowHeight-15);
-  canvas2d.resizeCanvas(windowWidth-15, windowHeight-15)
+  resizeCanvas(windowWidth, windowHeight);
+  if (canvas2d) {
+    canvas2d.resizeCanvas(windowWidth, windowHeight)
+  }
   if (guiRenderer) {
-    guiRenderer.width = windowWidth-15;
-    guiRenderer.height = windowHeight-15;
+    guiRenderer.width = windowWidth;
+    guiRenderer.height = windowHeight;
     const baseWidth = 1920;
     const baseHeight = 1080;
     guiRenderer.guiScale = Math.min(guiRenderer.width / baseWidth, guiRenderer.height / baseHeight);
@@ -317,7 +320,6 @@ function mousePressed() {
   }
 }
 mouseClickedLoc = {x: mouseX, y: mouseY}
-console.log(mouseClickedLoc)
 if (guiRenderer) {
   guiRenderer.clickGUIButton(mouseClickedLoc.x, mouseClickedLoc.y)
 }
