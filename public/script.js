@@ -20,6 +20,7 @@ let guiRenderer
 let framesSinceMouseMoved = 0
 let fps = 0
 let canvas2d
+let camY
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -37,6 +38,7 @@ function preload() {
   title = loadImage('Assets/title.png');
   backofcard = loadImage('Assets/back of card transparent.png');
   menubackground = loadImage('Assets/background.png')
+  personicon = loadImage('Assets/personicon.png')
 
   
 }
@@ -57,7 +59,7 @@ function setup() {
   //joinRoomButton.mousePressed(joinGameByRoomCode)
   //createARoomButton.position(8, windowHeight-68)
   //createARoomButton.mousePressed(createRoom)
-  //chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
+  chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture).populateBoard()
   //chessBoard.populateBoard()
   p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
   //chessBoardArray = chessBoard.getBoard()
@@ -83,6 +85,9 @@ function setup() {
   socket.on('nicknameChanged', (changedNickname) => {
     console.log("Nickname changed to: " + changedNickname)
     nickname = changedNickname
+    if (guiRenderer) {
+      guiRenderer.setButtonText("nickname", nickname)
+    }
   })
 
   socket.on('roomCreated', (roomCode) => {
@@ -90,6 +95,9 @@ function setup() {
     let roomCloseButton = createButton('Close room')
     roomCloseButton.position(8, windowHeight-88)
     roomCloseButton.mousePressed(closeRoom)
+    if (guiRenderer) {
+      guiRenderer.setScreen("game")
+    }
 
   })
 
@@ -105,6 +113,13 @@ function setup() {
     gameData = gameDataRecieved
     console.log("gameData: ")
     console.log(gameData)
+    if (guiRenderer) {
+      if (gameData.state == "started") {
+        if (guiRenderer.getState() == "menu") {
+          guiRenderer.setScreen("game")
+      }
+    }
+  }
     compareBoard(chessBoard, gameDataRecieved.board)
     if (chessBoard && gameDataRecieved.lastMove) {
       console.log(gameDataRecieved.lastMove)
@@ -120,7 +135,7 @@ function setup() {
 
   socket.on('initBoard', (board) => {
     console.log("init board recieved")
-    chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture)
+    chessBoard.clearBoard()
     for (let i = 0; i < board.length; i++) {
       for (let j = 0; j < board[i].length; j++) {
         if (board[i][j].piece) {
@@ -211,6 +226,10 @@ function easeOutElastic (t, b, c, d) {
   return a * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
 }
 
+function easeOutQuad (t, b, c, d) {
+  return -c * (t /= d) * (t - 2) + b;
+}
+
 
 function draw() {
   framesSinceMouseMoved++
@@ -245,15 +264,20 @@ function draw() {
         if (guiRenderer.getState() == "menu") {
           //cam.lookAt(50, 0, 0)
           //cam._orbit(0.005, 0, 0)
+          push()
+          scale(guiRenderer.guiScale)
+          cam.eyeY = -100
+          pop()
           break orbit;
         }
         else {
+
           orbitControl()
-          if (chessBoard) {
-            chessBoard.renderBoard()
-          }
         }
     }
+  }
+  if (chessBoard) {
+    chessBoard.renderBoard()
   }
   push()
   guiRenderer.renderGUI()
