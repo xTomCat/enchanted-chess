@@ -11,11 +11,17 @@ class GuiRenderer {
       const baseWidth = 1920;
       const baseHeight = 1080;
       this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
-      this.debugBuffer = new TextButton(50, 50, 50, 50, "[DEBUG] FPS: " + fps, 50, LEFT)
+      //this.debugBuffer = new TextButton(50, 50, 50, 50, "[DEBUG] FPS: " + fps, 50, LEFT)
       this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options", "nickname"];
+      this.ingameGuiElementNames = ["hamburgerMenu", "gameTime",
+        "opponentNamePlate", "playerNamePlate", "playerEnergyBar", "statusText"]// "opponentEnergy", 
+        //"playerNamePlate", "playerEnergy", 
+        //"card1", "card2", "card3", "card4", 
+        //"chatBox", "chatInput"]
+      this.ingameGuiElements = {}
       this.menuButtons = {}
       this.menuButtons.createARoom = 
-        new TextButton(630, 40, 50, 630)
+        new TextButton(630, 50, 50, 620)
           .setHoverEffect(20, 0, 0.5)
           .setText("Create a room")
           .setTextSize(50)
@@ -23,7 +29,7 @@ class GuiRenderer {
           .onClick(createRoom)
           .updateGraphics()
       this.menuButtons.joinARoom =
-        new TextButton(470, 40, 50, 700)
+        new TextButton(470, 50, 50, 690)
           .setHoverEffect(20, 0, 0.5)
           .setText("Join a room")
           .setTextSize(50)
@@ -31,21 +37,21 @@ class GuiRenderer {
           .onClick(joinGameByRoomCode)
           .updateGraphics()
       this.menuButtons.cardDeck =
-        new TextButton(380, 40, 50, 770)
+        new TextButton(380, 50, 50, 760)
           .setHoverEffect(20, 0, 0.5)
           .setText("Card Deck")
           .setTextSize(50)
           .setAlign(LEFT)
           .updateGraphics()
       this.menuButtons.options =
-        new TextButton(330, 40, 50, 840)
+        new TextButton(330, 50, 50, 830)
           .setHoverEffect(20, 0, 0.5)
           .setText("Options")
           .setTextSize(50)
           .setAlign(LEFT)
           .updateGraphics()
       this.menuButtons.nickname = 
-        new TextButton(330, 40, -100, 50)
+        new TextButton(330, 50, -50, 40)
           .setHoverEffect(-20, 0, 0.5)
           .setText("Anonymous")
           .setTextSize(50)
@@ -54,14 +60,14 @@ class GuiRenderer {
           .updateGraphics()
       let graphic = personicon.get(0, 0 , personicon.width, personicon.height)
       this.menuButtons.personIcon = 
-        new ImageButton(graphic.width, graphic.height, -50, 0)
+        new ImageButton(graphic.width, graphic.height, -50, 10)
           .setImage(graphic)
           .setScale(0.19)
           .setBounceEffect(0, 10, 0.05)
           .setHoverEffect(0, -20, 0.5)
           .updateGraphics()
           .setShadow(true)
-          .componentOf(this.menuButtons.nickname)
+      this.menuButtons.nickname.addComponent(this.menuButtons.personIcon)
 
 
       
@@ -126,17 +132,114 @@ class GuiRenderer {
       this.menuLetters.push(card)
       this.menuLetters.push(card2)
 
+      this.ingameGuiElements.hamburgerMenu = new ImageButton(50, 50, 50, 50)
+        .setImage(hamburgericon)
+        .setHoverEffect(0, -20, 0.5)
+        .updateGraphics()
+        .setShadow(true)
 
-      this.ingameGuiElementNames = ["hamburgerMenu", "gameTime",
-        "opponentVS", "opponentNamePlate", "opponentEnergy", 
-        "playerNamePlate", "playerEnergy", 
-        "card1", "card2", "card3", "card4", 
-        "chatBox", "chatInput"]
-      this.ingameGuiElements = {
-      }
+      this.ingameGuiElements.gameTime = new TextButton(50, 50, 50, 50)
+        .setText("00:00")
+        .setAlign(CENTER)
+        .setTextSize(50)
+        .updateGraphics()
+
+      this.ingameGuiElements.statusText = new TextButton(50, 50, 50, 100)
+        .setText("Waiting for players...")
+        .setAlign(CENTER)
+        .setTextSize(50)
+        .updateGraphics()
+
+      this.ingameGuiElements.opponentNamePlate = new OpponentNamePlate(350, 150, -400, 50)
+        .setAlign(RIGHT)
+
+      this.ingameGuiElements.playerNamePlate = new PlayerNamePlate(350*0.75, 150*0.5, 50, -250)
+        .setAlign(LEFT)
+        .anchorToBottom(true)
+
+      this.ingameGuiElements.playerEnergyBar = new PlayerEnergyBar(600, 155, 50, -50)
+        .setAlign(LEFT)
+        .anchorToBottom(true)
+
+      //this.ingameGuiElements.cardDeck = new CardDeck(600, 155, 50, 50)
+      //  .setAlign(CENTER)
+      //  .anchorToBottom(true)
+      //  .addCard()
+
+      // this.ingameGuiElements.card1 = new Card(100, 150, 50, 50)
+      //   .setAlign(LEFT)
+      //   .anchorToBottom(true)
+      //   .setCard("backofcard")
+      //   .updateGraphics()
 
 
+      // this.ingameGuiElements.card2 = new Card(100, 150, 100, 50)
+      //   .setAlign(LEFT)
+      //   .anchorToBottom(true)
+      //   .setCard("backofcard")
+      //   .updateGraphics()
+      
+      // this.ingameGuiElements.card3 = new Card(100, 150, 50, 50)
+      //   .setAlign(LEFT)
+      //   .anchorToBottom(true)
+
+
+
+      //this.ingameGuiElements.chatInput = new ChatInput(500, 50, -550, -50)
+      //  .setAlign(RIGHT)
+      //  .anchorToBottom(true)
+
+      //this.ingameGuiElements.chatInput.onClick(this.ingameGuiElements.chatInput.openChatBox)
+        
+      //this.ingameGuiElements.opponentNamePlate = new TextButton(200, 60, -50, 50)
+      //  .setText("Waiting...")
+      //  .setAlign(RIGHT)
+      //  .setTextSize(50)
+      //  .setBackPlate(255, 49, 40)
+      //  .updateGraphics()
+//
+      //let personIcon = new ImageButton(graphic.width, graphic.height, this.ingameGuiElements.opponentNamePlate.getTextWidth(), 10)
+      //    .setImage(graphic)
+      //    .setScale(0.19)
+      //    .updateGraphics()
+      //    .setShadow(true)
+
+      
+
+      //let namePlateBoxGraphic = createGraphics(this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("width")+10, this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("height"))
+      ////namePlateBoxGraphic.background(255, 49, 49)
+      //namePlateBoxGraphic.fill(255, 49, 40)
+      //namePlateBoxGraphic.rect(0, 0, namePlateBoxGraphic.width, namePlateBoxGraphic.height, 0,0,0,0)
+//
+      //let namePlateBoxObject = new ImageButton(this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("width")+10, this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("height")+5, -10, -5)
+      //  .setPlate(255, 49, 40)
+      //  .updateGraphics()
+////
+      ////namePlateBoxGraphic.fill(0)
+      ////namePlateBoxGraphic.rect(0, 0, namePlateBoxGraphic.width, namePlateBoxGraphic.height, 0,0,0,0)
+////
+      //let namePlateBoxShadow = new ImageButton(namePlateBoxObject.gBuffer.width, namePlateBoxObject.gBuffer.height, -5, 5)
+      //  .setPlate(0,0,0)
+      //  .updateGraphics()
+//
+      //this.ingameGuiElements.opponentNamePlate.addComponent(namePlateBoxShadow)
+      //this.ingameGuiElements.opponentNamePlate.addComponent(namePlateBoxObject)
+      //this.ingameGuiElements.opponentNamePlate.addComponent(personIcon)
+      //
+      //this.ingameGuiElements.opponentNamePlate.updateGraphics()
+      //this.ingameGuiElements.opponentNamePlate.addComponent(this.menuButtons.personIcon)
+
+      
+
+      //this.ingameGuiElements.opponentnamePlateBox = new TextButton(namePlateGBuffer.height, namePlateGBuffer.width, -100, 50)
+      //  .setText
+      //  .setAlign(RIGHT)
+      //  .setTextSize(50)
+      //  .updateGraphics()
+      
     }
+      
+      
 
     setButtonText(buttonName, text) {
       if (this.menuButtons[buttonName]) {
@@ -150,7 +253,7 @@ class GuiRenderer {
 
     setScreen(screen) {
       this.currentScreen.push(screen)
-      this.screenSwitchTimeStamp = frameCount
+      this.screenSwitchTimeStamp = totalTime*targetFrameRate
     }
 
 
@@ -176,9 +279,9 @@ class GuiRenderer {
       let wHeight = this.height;
       let wWidth = this.width;
       this.setCamera(500);
-      noStroke();
+      //noStroke();
       let rotationSpeed = 0.001; // Speed of rotation
-      let rotationAngle = frameCount * rotationSpeed; // Calculate rotation angle based on frame count
+      let rotationAngle = totalTime*targetFrameRate * rotationSpeed; // Calculate rotation angle based on frame count
       rotateZ(rotationAngle); // Rotate around the Y-axis
       tint(125); // Apply a dark tint to make the background darker
 
@@ -204,14 +307,14 @@ class GuiRenderer {
           this.renderGameUI()
           break
       }
-      if (debug) {
-        canvas2d.clear()
-        if (round(frameCount) % 60 == 0) {
-          this.debugBuffer.updateText("[DEBUG] FPS: " + round(frameRate()))
-        }
-          this.renderDebugOverlay()
-          pop()
-        }
+      // if (debug) {
+      //   canvas2d.clear()
+      //   if (round(frameCount) % 60 == 0) {
+      //     this.debugBuffer.updateText("[DEBUG] FPS: " + round(frameRate()))
+      //   }
+      //     this.renderDebugOverlay()
+      //     pop()
+      //   }
       }
     
 
@@ -230,63 +333,84 @@ class GuiRenderer {
       //  canvas2d.fill(100)
       //  canvas2d.rect(0, (wHeight/16)*0.85, wWidth/16, wHeight/48)
       //canvas2d.pop()
-      canvas2d.push()
-        canvas2d.fill(255)
-        canvas2d.textAlign(LEFT)
-        canvas2d.stroke(0)
-        textWithShadow2dCanvas("Name: " + nickname + "\nColor: " + color, this.width*0.02, this.height*0.90)
-        canvas2d.noStroke()
-      canvas2d.pop()
-      if (gameData) {
-        const players = gameData.players
-        canvas2d.push()
-          canvas2d.fill(255)
-          canvas2d.textAlign(LEFT)
-          textWithShadow2dCanvas("You're in a room! Code: " + gameData.roomCode, this.width*0.02, this.height*0.1)
-          if (players[0]) {
-            textWithShadow2dCanvas("Player 1: " + players[0].name, this.width*0.02, this.height*0.1+75)
-          }
-          if (players[1]) {
-            textWithShadow2dCanvas("Player 2: " + players[1].name, this.width*0.02, this.height*0.1+150)
-          } else{
-            textWithShadow2dCanvas("Waiting for player 2...", this.width*0.02, this.height*0.1+150)
-          }
-        canvas2d.pop()
-        if (check && gameData.state == "started") {
-          canvas2d.push()
-          canvas2d.fill(255)
-          canvas2d.textAlign(CENTER)
-          canvas2d.textWithShadow(check + " is in check!", 0, this.height*0.85)
-          canvas2d.pop()
+      //canvas2d.push()
+      //  canvas2d.fill(255)
+      //  canvas2d.textAlign(LEFT)
+      //  canvas2d.stroke(0)
+      //  textWithShadow2dCanvas("Name: " + nickname + "\nColor: " + color, this.width*0.02, this.height*0.90)
+      //  canvas2d.noStroke()
+      //canvas2d.pop()
+      //if (gameData) {
+      //  const players = gameData.players
+      //  canvas2d.push()
+      //    canvas2d.fill(255)
+      //    canvas2d.textAlign(LEFT)
+      //    textWithShadow2dCanvas("You're in a room! Code: " + gameData.roomCode, this.width*0.02, this.height*0.1)
+      //    if (players[0]) {
+      //      textWithShadow2dCanvas("Player 1: " + players[0].name, this.width*0.02, this.height*0.1+75)
+      //    }
+      //    if (players[1]) {
+      //      textWithShadow2dCanvas("Player 2: " + players[1].name, this.width*0.02, this.height*0.1+150)
+      //    } else{
+      //      textWithShadow2dCanvas("Waiting for player 2...", this.width*0.02, this.height*0.1+150)
+      //    }
+      //  canvas2d.pop()
+      //  if (check && gameData.state == "started") {
+      //    canvas2d.push()
+      //    canvas2d.fill(255)
+      //    canvas2d.textAlign(CENTER)
+      //    canvas2d.textWithShadow(check + " is in check!", 0, this.height*0.85)
+      //    canvas2d.pop()
+      //}
+      //}
+      //canvas2d.push()
+      //  canvas2d.fill(255)
+      //  canvas2d.textAlign(CENTER)
+      //  if (gameData) {
+      //    if (gameData.state == "waiting") {
+      //      textWithShadow2dCanvas("Waiting for players...", this.width*0.5, this.height*0.7)
+      //    } else if (gameData.state == "started") {
+      //      if (gameData.turn == color) {
+      //        textWithShadow2dCanvas("It's your turn!", this.width*0.5, this.height*0.7)
+      //      } else if (gameData.turn != color) {
+      //        textWithShadow2dCanvas("It's the other player's turn!", this.width*0.5, this.height*0.7)
+      //      }
+      //    } else if (gameData.state == "checkmate" || "closing") {
+      //      let winner 
+      //      if (gameData.check == "white") {
+      //        winner = "Black"
+      //      } else if (gameData.check == "black") {
+      //        winner = "White"
+      //      }
+      //      textWithShadow2dCanvas("Checkmate! " + winner + " wins!", this.width*0.5, this.height*0.7)
+      //    }
+      //}
+      //if (timeUntilLeaving != null) {
+      //  canvas2d.push()
+      //  canvas2d.textWithShadow("Leaving room in: " + timeUntilLeaving, this.width*0.5, this.height*0.8)
+      //  canvas2d.pop()
+      //}
+
+
+      //for (let i = 0; i < this.menuButtonNames.length; i++) {
+      //  canvas2d.push();
+      //  let buttonName = this.menuButtonNames[i];
+  //
+      //  this.menuButtons[buttonName].drawIcon(canvas2d, this.guiScale);
+      //  canvas2d.pop();
+      //}
+
+      if (cardDataManager) {
+        cardDataManager.displayDeck()
       }
+
+      for (let i = 0; i < this.ingameGuiElementNames.length; i++) {
+        canvas2d.push();
+        let buttonName = this.ingameGuiElementNames[i];
+        this.ingameGuiElements[buttonName].drawIcon(canvas2d, this.guiScale);
+        canvas2d.pop();
       }
-      canvas2d.push()
-        canvas2d.fill(255)
-        canvas2d.textAlign(CENTER)
-        if (gameData) {
-          if (gameData.state == "waiting") {
-            textWithShadow2dCanvas("Waiting for players...", this.width*0.5, this.height*0.7)
-          } else if (gameData.state == "started") {
-            if (gameData.turn == color) {
-              textWithShadow2dCanvas("It's your turn!", this.width*0.5, this.height*0.7)
-            } else if (gameData.turn != color) {
-              textWithShadow2dCanvas("It's the other player's turn!", this.width*0.5, this.height*0.7)
-            }
-          } else if (gameData.state == "checkmate" || "closing") {
-            let winner 
-            if (gameData.check == "white") {
-              winner = "Black"
-            } else if (gameData.check == "black") {
-              winner = "White"
-            }
-            textWithShadow2dCanvas("Checkmate! " + winner + " wins!", this.width*0.5, this.height*0.7)
-          }
-      }
-      if (timeUntilLeaving != null) {
-        canvas2d.push()
-        canvas2d.textWithShadow("Leaving room in: " + timeUntilLeaving, this.width*0.5, this.height*0.8)
-        canvas2d.pop()
-      }
+
       canvas2d.pop()
       canvas2d.push()
         //console.log(maxcamtilt, mincamtilt)
@@ -295,6 +419,25 @@ class GuiRenderer {
         canvas2d.fill(255)
         canvas2d.pop()
       //ellipse(wWidth/16, wHeight/16, 5)
+      if (debug) {
+        canvas2d.push()
+        canvas2d.fill(255)
+        canvas2d.stroke(0)
+        canvas2d.strokeWeight(5)
+        canvas2d.line(0, wHeight/2, wWidth, wHeight/2)
+        canvas2d.line(wWidth/2, 0, wWidth/2, wHeight)
+
+        canvas2d.pop()
+        if (mouseClickedLoc) {
+          canvas2d.push()
+          canvas2d.fill(255)
+          canvas2d.stroke(0)
+          canvas2d.strokeWeight(5)
+          canvas2d.ellipse(mouseClickedLoc.x, mouseClickedLoc.y, 20)
+          canvas2d.pop()
+        }
+      }
+      
       push()
         scale(0.0621) //magic number. Why? nobody knows
         image(canvas2d, -this.width, -this.height, (this.width), (this.height))
@@ -399,53 +542,22 @@ class GuiRenderer {
     }
 
     clickGUIButton(x, y) {
+      if (this.currentScreen[this.currentScreen.length - 1] == "menu") {
       for (let i = 0; i < this.menuButtonNames.length; i++) {
         let buttonName = this.menuButtonNames[i];
-        if (this.menuButtons[buttonName].onClick){
+        if (typeof this.menuButtons[buttonName].onClickCallBack == 'function'){
           this.menuButtons[buttonName].handleClick(x, y, this.guiScale);
         }
       }
-
-
-
-      //let buttonName = null;
-      //for (let i = 0; i < this.menuButtonNames.length; i++) {
-      //  let buttonX = this.menuButtons[this.menuButtonNames[i]].distFromLeft*this.guiScale; // X position of the button
-      //  let buttonY = this.menuButtons[this.menuButtonNames[i]].distFromTop*this.guiScale; // Y position of the button
-      //  let buttonWidth = this.menuButtons[this.menuButtonNames[i]].textBuffer.gBuffer.width; // Approximate width of the button
-      //  let buttonHeight = this.menuButtons[this.menuButtonNames[i]].textBuffer.gBuffer.height; // Approximate height of the button 
-      //  canvas2d.ellipse(buttonX, buttonY, 10)
-      //  canvas2d.ellipse(buttonX + buttonWidth, buttonY, 10)
-      //  canvas2d.ellipse(buttonX, buttonY + buttonHeight, 10)
-      //  canvas2d.ellipse(buttonX + buttonWidth, buttonY + buttonHeight, 10) //
-      //  if (
-      //    x < buttonX + buttonWidth &&
-      //    x > buttonX &&
-      //    y < buttonY + buttonHeight &&
-      //    y > buttonY
-      //  ) {
-      //    buttonName = this.menuButtonNames[i];
-      //  }
-      //}
-      //if (buttonName) {
-      //  switch (buttonName) {
-      //    case "createARoom":
-      //      console.log("createARoom")
-      //      this.setScreen("game")
-      //      createRoom()
-      //      break
-      //    case "joinARoom":
-      //      console.log("createARoom")
-      //      break
-      //    case "cardDeck":
-      //      console.log("createARoom")
-      //      break
-      //    case "options":
-      //      console.log("createARoom")
-      //      break
-      //  }
-      //}
+    } else if (this.currentScreen[this.currentScreen.length - 1] == "game") {
+      for (let i = 0; i < this.ingameGuiElementNames.length; i++) {
+        let buttonName = this.ingameGuiElementNames[i];
+        if (typeof this.ingameGuiElements[buttonName].onClickCallBack == 'function'){
+          this.ingameGuiElements[buttonName].handleClick(x, y, this.guiScale);
+        }
+      }
     }
+  }
     
   
 }

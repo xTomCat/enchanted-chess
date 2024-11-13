@@ -6,7 +6,7 @@ let mousePressedInBoard = false
 let guiGraphics
 let gl
 let socket
-let nickname = "anonymous"
+let nickname = "Anonymous"
 let gameData = null
 let mouseClickedLoc
 let availableMoves = null
@@ -21,6 +21,14 @@ let framesSinceMouseMoved = 0
 let fps = 0
 let canvas2d
 let camY
+let deltaTime = 0
+let lastFrameTime = performance.now()
+let totalTime = 0
+let totalTimeFloor = 0
+let targetFrameRate = 60
+let selectedThisClick = false
+const cardHeight = 435
+const cardWidth = 313
 
 function preload() {
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
@@ -36,9 +44,16 @@ function preload() {
   queenModel = loadModel('Assets/models/chessQueen.obj');
   kingModel = loadModel('Assets/models/chessKing.obj');
   title = loadImage('Assets/title.png');
-  backofcard = loadImage('Assets/back of card transparent.png');
+  backofcard = loadImage('Assets/backofcard.png');
   menubackground = loadImage('Assets/background.png')
   personicon = loadImage('Assets/personicon.png')
+  hamburgericon = loadImage('Assets/Hamburger_icon.svg.png')
+  manadiamondred = loadImage('Assets/manadiamondred.png')
+  manadiamondblue = loadImage('Assets/manadiamondblue.png')
+  manadiamondgrey = loadImage('Assets/manadiamondgrey.png')
+  manaorb = loadImage('Assets/manaorb.png')
+  placeholdercard = loadImage("Assets/backofcard.png")
+  fireballcard = loadImage("Assets/fireballcard.png")
 
   
 }
@@ -60,8 +75,12 @@ function setup() {
   //createARoomButton.position(8, windowHeight-68)
   //createARoomButton.mousePressed(createRoom)
   chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture).populateBoard()
+  cardDataManager = new CardDataManager()
+  //cardDataManager.addCardToDeck("Placeholder")
+  //cardDataManager.addCardToDeck("Placeholder")
+  //cardDataManager.addCardToDeck("Placeholder")
+  //cardDataManager.addCardToDeck("Placeholder")
   //chessBoard.populateBoard()
-  p1Deck = new cardDeckIngame(this.windowWidth * 0.10, this.windowHeight * 0.7, "player1")
   //chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
   console.log(cam)
@@ -87,26 +106,53 @@ function setup() {
     nickname = changedNickname
     if (guiRenderer) {
       guiRenderer.setButtonText("nickname", nickname)
+      guiRenderer.setButtonText("playerNamePlate", nickname)
     }
+  })
+
+  socket.on('recievePlayCard', (pColor, index, x, y, card) => {
+    console.log(pColor + "is playing card with index: " + index)
+    if (pColor == color) {
+      
+      cardDataManager.playCard(index, x, y)
+     } else {
+       cardDataManager.activateCardEffect(card, x, y, true)
+     }
+  })
+
+  socket.on('recieveFakePiece', (x, y, piece) => {
+    console.log("Recieved fake piece")
+    chessBoard.setTileData(x, y, {piece: new ChessPiece(piece.type, piece.color)})
   })
 
   socket.on('roomCreated', (roomCode) => {
     room = roomCode
-    let roomCloseButton = createButton('Close room')
-    roomCloseButton.position(8, windowHeight-88)
-    roomCloseButton.mousePressed(closeRoom)
+    //let roomCloseButton = createButton('Close room')
+    //roomCloseButton.position(8, windowHeight-88)
+    //roomCloseButton.mousePressed(closeRoom)
+    //socket.emit('updateDeck', cardDataManager.playerDeck)
     if (guiRenderer) {
       guiRenderer.setScreen("game")
     }
 
   })
+  
 
   socket.on('roomClosed', () => {
     room = null
-    chessBoard = null
+    chessBoard.clearBoard().populateBoard()
     color = "unset!"
     console.log('Room closed')
     gameData = null
+    cardDataManager.resetDeck()
+    if (guiRenderer) {
+      guiRenderer.setScreen("menu")
+    }
+  })
+
+  socket.on('requestDeck', () => {
+    socket.emit('sendDeck', cardDataManager.playerDeck)
+    console.log("Server requested deck")
   })
 
   socket.on('gameData', (gameDataRecieved) => { 
@@ -114,10 +160,50 @@ function setup() {
     console.log("gameData: ")
     console.log(gameData)
     if (guiRenderer) {
+      let opponentNamePlate = guiRenderer.ingameGuiElements.opponentNamePlate
+      let roomCodeText = guiRenderer.ingameGuiElements.gameTime
+      let opponent
+      switch (color) {
+        case "white":
+          player = gameData.players[0]
+          opponent = gameData.players[1]
+          break;
+        case "black":
+          player = gameData.players[1]
+          opponent = gameData.players[0]
+          break;
+        default:
+          opponent = null
+          break;
+      }
+      let roomCodeAsString = "Room code: " + gameData.roomCode.toString()
+      if (roomCodeText.getText() !== roomCodeAsString) {
+        roomCodeText.updateText(roomCodeAsString)
+      }
+      //if (gameData.fakePieces.length > 0) {
+      //  for (let piece of gameData.fakePieces) {
+      //    chessBoard.setTileData(piece.x, piece.y, {piece: new ChessPiece(piece.type, piece.color)})
+      //  }
+//
+      //}
+      if (player.energy !== guiRenderer.ingameGuiElements.playerEnergyBar.energy) {
+        guiRenderer.ingameGuiElements.playerEnergyBar.update(player.energy)
+      }
       if (gameData.state == "started") {
         if (guiRenderer.getState() == "menu") {
           guiRenderer.setScreen("game")
-      }
+        }
+        if (opponentNamePlate.getText() !== opponent.name) {
+          opponentNamePlate.updateText(opponent.name)
+        }
+        if (gameData.turn == color)
+          guiRenderer.ingameGuiElements.statusText.updateText("It's your turn!")
+        else {
+          guiRenderer.ingameGuiElements.statusText.updateText("It's " + opponent.name + "'s turn!")
+        }
+        
+        
+        
     }
   }
     compareBoard(chessBoard, gameDataRecieved.board)
@@ -132,6 +218,8 @@ function setup() {
     console.log(chessBoard.getBoard())
     check = gameData.check
   })
+
+
 
   socket.on('initBoard', (board) => {
     console.log("init board recieved")
@@ -153,6 +241,9 @@ function setup() {
 
   socket.on('leavingSoon', (count) => {
     timeUntilLeaving = count
+    if (guiRenderer) {
+      guiRenderer.ingameGuiElements.statusText.updateText("Leaving in " + timeUntilLeaving + " seconds")
+    }
     if (timeUntilLeaving == 0) {
       timeUntilLeaving = null
     }
@@ -193,7 +284,7 @@ function closeRoom() {
 }
 
 function createRoom() {
-  socket.emit('createRoom')
+  socket.emit('createRoom', cardDataManager.deckAsServerData())
 }
 
 function promptNickName() {
@@ -207,7 +298,7 @@ function promptNickName() {
 function joinGameByRoomCode() {
   let roomCode = prompt("Please enter the room code")
   if (roomCode) {
-    socket.emit('joinGame', roomCode)
+    socket.emit('joinGame', roomCode, cardDataManager.deckAsServerData())
   }
 }
 
@@ -232,10 +323,14 @@ function easeOutQuad (t, b, c, d) {
 
 
 function draw() {
+  currentFrameTime = performance.now()
+  deltaTime = (currentFrameTime - lastFrameTime)/1000
+  lastFrameTime = currentFrameTime 
+  totalTime += deltaTime
   framesSinceMouseMoved++
   background(100)
   guiRenderer.renderBackground()
-  if (frameCount % 60 == 0) {
+  if (frameCount % targetFrameRate == 0) {
     fps = round(frameRate())
   }
   //push()
@@ -258,6 +353,7 @@ function draw() {
   ambientLight(128, 128, 128);
   directionalLight(128, 128, 128, 0, 1, 0);
   lightFalloff(1, 0, 0)
+  noStroke()
 
   orbit: if(!mousePressedInBoard){
     if (guiRenderer) {
@@ -298,6 +394,9 @@ function windowResized() {
     const baseHeight = 1080;
     guiRenderer.guiScale = Math.min(guiRenderer.width / baseWidth, guiRenderer.height / baseHeight);
 }
+if (cardDataManager) {
+  cardDataManager.updateCardPositions()
+}
 }
 
 
@@ -331,6 +430,14 @@ function keyPressed() {
     
   }
 
+  //if (guiRenderer) {
+  //  if (guiRenderer.ingameGuiElements.chatInput.focused) {
+  //    let chatInput = guiRenderer.ingameGuiElements.chatInput
+  //    chatInput.typeCharacter(key)
+//
+  //  }
+  //}
+
 }
 
 function mousePressed() {
@@ -346,11 +453,48 @@ function mousePressed() {
 mouseClickedLoc = {x: mouseX, y: mouseY}
 if (guiRenderer) {
   guiRenderer.clickGUIButton(mouseClickedLoc.x, mouseClickedLoc.y)
+  if (cardDataManager) {
+    for (let card of cardDataManager.playerDeck) {
+      card.iconBuffer.handleClick(mouseClickedLoc.x, mouseClickedLoc.y, guiRenderer.guiScale)
+    }
+    //let card = cardDataManager.getSelectedCard()
+    //console.log("Gui scale: " + guiRenderer.guiScale)
+    //console.log("mouseX: " + mouseClickedLoc.x + " mouseY: " + mouseClickedLoc.y)
+    //if (card) {
+    //  let targX = mouseClickedLoc.x/(guiRenderer.guiScale)// - card.iconBuffer.gBuffer.width/2// * guiRenderer.guiScale; // Distance from left of the screen
+    //  let targY = mouseClickedLoc.y/(guiRenderer.guiScale)// - card.iconBuffer.gBuffer.height/4// * guiRenderer.guiScale;
+    //  //if (card.iconBuffer.align == RIGHT) {
+    //  //    targX = windowWidth + targX
+    //  //} else if (card.iconBuffer.align == CENTER) {
+    //  //    targX = ((windowWidth+15)/2)
+    //  //    canvas.imageMode(CENTER)
+    //  //}
+    //  if (card.iconBuffer.anchorBottom) {
+    //    //buttonY = windowHeight - (this.gBuffer.height - this.y) * guiScale
+    //    targY = (targY - ((guiRenderer.height/2)) - ((card.iconBuffer.gBuffer.height/guiRenderer.guiScale)/2))
+    //    //targY = targY - (card.iconBuffer.gBuffer.height - mouseClickedLoc.y) * guiRenderer.guiScale
+    //    //targY = windowHeight - (card.iconBuffer.gBuffer.height - card.iconBuffer.y) * guiRenderer.guiScale
+    //      
+    //
+    //  }
+    //  card.iconBuffer.animateTo(targX, targY, 100)
+   // }
+  }
 }
+
 }
+
+
 
 function mouseReleased() {
   mousePressedInBoard = false
+  console.log("distance: " + dist(mouseX, mouseY, mouseClickedLoc.x, mouseClickedLoc.y))
+  //if (dist(mouseX, mouseY, mouseClickedLoc.x, mouseClickedLoc.y) < 5) {
+  //  for (let card of cardDataManager.playerDeck) {
+  //    card.iconBuffer.setSelected(false)
+  //  
+  //  }
+  //}
 }
 
 function mouseMoved() {
@@ -381,6 +525,20 @@ function worldToBoardIndices(worldX, worldZ, chessBoardObject) {
   } else {
     return null;
   }
+}
+
+function boardToWorldCoords(boardX, boardY, chessBoardObject) {
+  let tileSize = chessBoardObject.getTileSize();
+  let boardWidth = chessBoardObject.getWidth();
+  let boardHeight = chessBoardObject.getHeight();
+
+  let halfBoardWidth = (boardWidth * tileSize) / 2;
+  let halfBoardHeight = (boardHeight * tileSize) / 2;
+
+  let worldX = (boardY * tileSize) - halfBoardWidth;
+  let worldZ = (boardX * tileSize) - halfBoardHeight;
+
+  return { x: worldX, z: worldZ };
 }
 
 function textWithShadow2dCanvas(string, x, y) {

@@ -36,20 +36,87 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('disconnect', () => {
-        const roomCode = Object.keys(games).find(roomCode => games[roomCode].players.find(p => p.socketId === socket.id));
-        console.log('Client disconnected with ID: ' + socket.id);
-        connectedPlayers = connectedPlayers.filter(p => p.socketId !== socket.id);
-        logConnectedPlayers();
-        if (roomCode && games[roomCode]) {
-          games[roomCode].players = games[roomCode].players.filter(p => p.socketId !== socket.id);
-          if (games[roomCode].players.length === 0) {
-            delete games[roomCode];
-            console.log('Room closed: ' + roomCode);
-            console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
-          }
-          sendGameDataToRoom(roomCode)
+    socket.on('playCard', (index, x, y) => {
+      const player = connectedPlayers.find(p => p.socketId === socket.id)
+      if (!player) {
+        console.log("Player not found!")
+        return
+      }
+      const game = Object.values(games).find(g => g.players.includes(player))
+      if (!game) {
+        console.log("Game not found!")
+        return
+      }
+      console.log("--------------------")
+      console.log("Player's deck:")
+      for (let i = 0; i < player.deck.length; i++) {
+        console.log("Index: " + i)
+        console.log(player.deck[i])
+      }
+      console.log("--------------------")
+      if (!player.deck[index]) {
+        console.log("Card not found!")
+        return
+      }
+      let card = player.deck[index]
+      console.log("Cost: " + card.cost)
+      if (card.cost <= player.energy) {
+        if (game.activateCardEffect(card, x, y, player)) {
+          player.energy -= card.cost
+          player.removeCardFromDeck(index)
+          console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y)
+          //sendGameDataToRoom(game.roomCode)
+          io.to('game-' + game.roomCode).emit('recievePlayCard', player.color, index, x, y, card)
+        } else {
+          console.log("Invalid!")
         }
+        
+      } else {
+        console.log("Player " + player.name + " tried to play a card without enough energy!")
+      }
+        
+      
+    });
+
+    socket.on('recieveDeck', (deck) => {
+      const player = connectedPlayers.find(p => p.socketId === socket.id)
+      let serverSideDeck = []
+      if (deck.length !== 4) {
+        console.log("Player " + player.name + " tried to set an invalid deck!")
+        return
+      }
+      for (card of deck) {
+        if (!cardDataManager.cardExists(card)) {
+          console.log("Player " + player.name + " tried to set an invalid deck!")
+          return
+        }
+        let existingCard = cardDataManager.cardData.find(c => c.id === card.id);
+        let serverSideCard = new Card(existingCard.id, existingCard.name, existingCard.cost)
+          serverSideDeck.push(serverSideCard)
+        }
+      if (player) {
+        player.setDeck(serverSideDeck)
+      }
+    })
+
+    socket.on('disconnect', () => {
+      if (Object.keys(games).length === 0) {
+        console.log("No games found!")
+        return
+      }
+      const roomCode = Object.keys(games).find(roomCode => games[roomCode].players.find(p => p.socketId === socket.id));
+      console.log('Client disconnected with ID: ' + socket.id);
+      connectedPlayers = connectedPlayers.filter(p => p.socketId !== socket.id);
+      logConnectedPlayers();
+      if (roomCode && games[roomCode]) {
+        games[roomCode].players = games[roomCode].players.filter(p => p.socketId !== socket.id);
+        for(let player of games[roomCode].players) {
+          player.leaveRoom(roomCode)
+        }
+        delete games[roomCode];
+          console.log('Room closed: ' + roomCode);
+          console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
+      }
     });
 
     socket.on('nickname', (nickname, roomCode) => {
@@ -68,58 +135,70 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('createRoom', () => {
-        let roomCode = generateRoomCode6Digits();
-        socket.join('game-' + roomCode);
-
+    socket.on('createRoom', (deckData) => {
+        const roomCode = generateRoomCode6Digits();
+        const parsedDeck = JSON.parse(deckData)
+        let serverSideDeck = [];
+        for (let card of parsedDeck) {
+          if (!cardDataManager.cardExists(card.name)) {
+            console.log("Player " + player.name + " tried to set an invalid deck!");
+            return;
+          }
+          let existingCard = cardDataManager.cardData.find(c => c.id === card.id);
+          let serverSideCard = new Card(existingCard.id, existingCard.name, existingCard.cost)
+            serverSideDeck.push(serverSideCard)
+        }
         //const player = connectedPlayers.find(p => p.socketId === socket.id)
         const game = new Game(roomCode);
+        
         console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length + 1))
+        socket.join('game-' + roomCode);
         games[roomCode] = game;
         game.populateBoard();
         game.addPlayer(player);
         console.log(player.name + ' created a room with code: ' + roomCode);
         io.to(socket.id).emit('roomCreated', roomCode, player.name);
+        player.setDeck(serverSideDeck);
+        console.log(serverSideDeck)
         player.setColor("white")
         player.generateBoardOnClient(game.getBoard())
         sendGameDataToRoom(roomCode)
     });
 
-    socket.on('joinGame', (roomCode) => {
+    socket.on('joinGame', (roomCode, deckData) => {
         const player = connectedPlayers.find(p => p.socketId === socket.id)
+        const parsedDeck = JSON.parse(deckData)
+        let serverSideDeck = [];
+        for (let card of parsedDeck) {
+          if (!cardDataManager.cardExists(card.name)) {
+            console.log("Player " + player.name + " tried to set an invalid deck!");
+            return;
+          }
+          let existingCard = cardDataManager.cardData.find(c => c.id === card.id);
+          let serverSideCard = new Card(existingCard.id, existingCard.name, existingCard.cost)
+            serverSideDeck.push(serverSideCard)
+        }
         const game = games[roomCode];
         if (game && game.players.length < 2) {
-            game.addPlayer(player);
-            socket.join('game-' + roomCode);
-            console.log(player.name + ' joined a room with code: ' + roomCode);
-            player.setColor("black")
-            player.generateBoardOnClient(game.getBoard())
-            sendGameDataToRoom(roomCode)
-            game.start()
+          player.setDeck(serverSideDeck);
+          console.log(player.deck)
+          game.addPlayer(player);
+          socket.join('game-' + roomCode);
+          console.log(player.name + ' joined a room with code: ' + roomCode);
+          player.setColor("black")
+          player.generateBoardOnClient(game.getBoard())
+          sendGameDataToRoom(roomCode)
+          game.start()
         } else {
             io.to(socket.id).emit('error', 'Room code not found!')
         
       }
+      
     })
 
     socket.on('closeRoom', (roomCode) => {
         if (games[roomCode] && games[roomCode].players.find(p => p.socketId === socket.id)) {
-            const player1 = games[roomCode].players[0];
-            const player2 = games[roomCode].players[1];
-            if (player1) {
-              player.setColor("unset!")
-            }
-            if (player2) {
-              player.setColor("unset!")
-            }
-            delete games[roomCode];
-            //io.to('game-' + roomCode).emit('roomClosed');
-            if (player1) {
-              player1.leaveRoom(player1, roomCode);
-            }
-            if (player2) {
-              player2.leaveRoom(player2, roomCode);
-            }
+            games[roomCode].close()
         };
     })
 })
@@ -141,19 +220,37 @@ function generateRoomCode6Digits() {
 
 function sendGameDataToRoom(roomCode) {
     const game = games[roomCode];
+    
     if (!game) {
         return;
     }
-    console.log(game.lastMove)
-    const gameData = {
-        players: game.getPlayers(),
+    const players = game.getPlayers();
+    whiteDeck = []
+    blackDeck = []
+    //fakePieces = []
+    //if (game.fakePieceQueue.length > 0) {
+    //  fakePieces = game.fakePieceQueue
+    //}
+    if (players[0]) {
+      whiteDeck = players[0].deck
+    } 
+    if (players[1]) {
+      blackDeck = players[1].deck
+    }
+    let gameData = {
+        players: players,
         board: game.getBoard(),
         state: game.getState(),
         turn: game.getTurn(),
         lastMove: game.lastMove,
         lastMovedPiece: game.lastMovedPiece,
         check: game.check,
-        roomCode: roomCode
+        roomCode: roomCode,
+        decks: {
+          white: whiteDeck,
+          black: blackDeck
+        },
+        //fakePieces: fakePieces
         
 }
 io.to('game-' + roomCode).emit('gameData', gameData);
@@ -166,8 +263,14 @@ function sleep(ms) {
 class Player {
     constructor(name, socketId) {
       this.name = name;
+      this.energy = 6;
+      this.deck = [];
       this.socketId = socketId;
       this.color = "unset!";
+    }
+
+    setDeck(deck) {
+      this.deck = deck;
     }
 
     setColor(color) {
@@ -183,6 +286,10 @@ class Player {
 
     generateBoardOnClient(board) {
       io.to(this.socketId).emit('initBoard', board)
+    }
+
+    removeCardFromDeck(slot) {
+      this.deck.splice(slot, 1);
     }
 
     leaveRoom(roomCode) {
@@ -212,6 +319,7 @@ class Game {
     this.turn = "white";
     this.check = null
     this.lastMove = null
+    this.fakePieceQueue = []
     this.lastMovedPiece
     for (let i = 0; i < 8; i++) {
         this.chessBoard.push([]);
@@ -283,7 +391,7 @@ class Game {
         this.players[0].leaveRoom(this.roomCode)
       }
       if (this.players[1]) {
-        this.players[0].leaveRoom( this.roomCode)
+        this.players[1].leaveRoom(this.roomCode)
       }
       console.log("Game closed with ropm code: " + this.roomCode);
       console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
@@ -314,6 +422,7 @@ class Game {
             this.checkMate = "black"
             this.state = "checkmate"
             sendGameDataToRoom(this.roomCode)
+            console.log("Checkmate!")
             this.close()
           }
         } else if (this.isInCheck("white")) {
@@ -322,6 +431,7 @@ class Game {
             this.checkMate = "white"
             this.state = "checkmate"
             sendGameDataToRoom(this.roomCode)
+            console.log("Checkmate!")
             this.close()
           }
         } else {
@@ -384,43 +494,110 @@ class Game {
           console.log("Game could not start!")
         )
       }
-      isInCheck(color) {
-        let kingPos = this.findKing(color);
-        let king = this.getTileData(kingPos.x, kingPos.y).piece;
-        //loop through the board
-        for (let i = 0; i < this.height; i++) {
-          for (let j = 0; j < this.width; j++) {
-            //get the piece at loop location
-            let piece = this.getTileData(j, i).piece;
-            //if the piece exists and is not the same color as the king
-            if (piece && piece.color != color) {
-    
-              let moves = piece.getAvailableMoves(this, j, i);
-              if (moves) {
-              for (let i = 0; i < moves.length; i++) {
-                if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
-                  return true;
-                }
-              }
-            }
-            }
+
+      //close() {{
+      //  const player1 = this.players[0];
+      //  const player2 = this.players[1];
+      //  const roomCode = this.roomCode;
+      //  if (player1 instanceof Player) {
+      //    player1.setColor("unset!")
+      //  }
+      //  if (player2 instanceof Player) {
+      //    player2.setColor("unset!")
+      //  }
+      //  
+      //  //io.to('game-' + roomCode).emit('roomClosed');
+      //  if (player1 instanceof Player) {
+      //    player1.leaveRoom(player1, roomCode);
+      //  }
+      //  if (player2 instanceof Player) {
+      //    player2.leaveRoom(player2, roomCode);
+      //  }
+      //  delete this;
+      //};
+      //}
+
+    //  isInCheck(color) {
+    //    let kingPos = this.findKing(color);
+    //    let king = this.getTileData(kingPos.x, kingPos.y).piece;
+    //    //loop through the board
+    //    for (let i = 0; i < this.height; i++) {
+    //      for (let j = 0; j < this.width; j++) {
+    //        //get the piece at loop location
+    //        let piece = this.getTileData(j, i).piece;
+    //        //if the piece exists and is not the same color as the king
+    //        if (piece && piece.color != color) {
+    //
+    //          let moves = piece.getAvailableMoves(this, j, i);
+    //          if (moves) {
+    //          for (let i = 0; i < moves.length; i++) {
+    //            if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
+    //              return true;
+    //            }
+    //          }
+    //        }
+    //        }
+    //      }
+    //    }
+    //    return false;
+    //
+    //}
+//
+    //isCheckMate(color) {
+    //  let kingPos = this.findKing(color);
+    //  let king = this.getTileData(kingPos.x, kingPos.y).piece;
+    //  let moves = king.getAvailableMoves(this, kingPos.x, kingPos.y);
+    //  let isInCheck = this.isInCheck(color);
+    //  if (moves.length == 0 && isInCheck) {
+    //    return true;
+    //  }
+    //  else {
+    //    return false;
+    //  }
+    //}
+    isInCheck(color) {
+      let kingPos = this.findKing(color);
+      let king = this.getTileData(kingPos.x, kingPos.y).piece;
+      for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        let piece = this.getTileData(j, i).piece;
+        if (piece && piece.color !== color) {
+        let moves = piece.getAvailableMoves(this, j, i);
+        for (let move of moves) {
+          if (move.x === kingPos.x && move.y === kingPos.y) {
+          return true;
           }
         }
-        return false;
-    
+        }
+      }
+      }
+      return false;
     }
 
     isCheckMate(color) {
-      let kingPos = this.findKing(color);
-      let king = this.getTileData(kingPos.x, kingPos.y).piece;
-      let moves = king.getAvailableMoves(this, kingPos.x, kingPos.y);
-      let isInCheck = this.isInCheck(color);
-      if (moves.length == 0 && isInCheck) {
-        return true;
+      if (!this.isInCheck(color)) {
+      return false;
       }
-      else {
-        return false;
+      for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        let piece = this.getTileData(j, i).piece;
+        if (piece && piece.color === color) {
+        let moves = piece.getAvailableMoves(this, j, i);
+        for (let move of moves) {
+          let originalPiece = this.getTileData(move.x, move.y).piece;
+          this.setTileData(move.x, move.y, { piece: piece });
+          this.setTileData(j, i, { piece: null });
+          let inCheck = this.isInCheck(color);
+          this.setTileData(move.x, move.y, { piece: originalPiece });
+          this.setTileData(j, i, { piece: piece });
+          if (!inCheck) {
+          return false;
+          }
+        }
+        }
       }
+      }
+      return true;
     }
     
     findKing(color) {
@@ -436,6 +613,47 @@ class Game {
       }
       }
       }
+    }
+
+    activateCardEffect(card, x, y, player) {
+      switch (card.name) {
+        case "Placeholder":
+          console.log("Placeholder card effect activated in game " + this.roomCode + " at location " + x + ", " + y);
+          break;
+        case "Fireball":
+          let availableTiles = card.getCardPlayTiles(this.getBoard(), player);
+          if (availableTiles.length === 0) {
+            console.log("No valid targets for Fireball.")
+            return;
+          }
+            let isValidTarget = availableTiles.some(tile => tile.x === x && tile.y === y);
+            if (!isValidTarget) {
+            console.error("Invalid target for Fireball.");
+            return false;
+            }
+            console.log("Fireball hits target at " + x + ", " + y);
+            let fakePiece = this.getTileData(x, y).piece;
+            this.setTileData(x, y, {piece: null});
+            sendGameDataToRoom(this.roomCode)
+            this.sendFakePiece(x, y, fakePiece, player)
+            return true
+            // Add logic to handle the effect of the Fireball card on the target
+          break;
+        default:
+          console.error("Card effect not found.");
+          break;
+      }
+  
+    }
+
+    sendFakePiece(x, y, piece, player) {
+      let fakePiece = new ChessPiece(piece.type, piece.color)
+      //this.fakePieceQueue.push({x: x, y: y, piece: fakePiece})
+      io.to(player.socketId).emit('recieveFakePiece', x, y, fakePiece)
+    }
+
+    clearFakePieceQueue() {
+      this.fakePieceQueue = []
     }
 
 }
@@ -689,4 +907,113 @@ class ChessPiece {
         return moves
       }
     }
+
+class Card {
+  constructor(id, name, cost) {
+    this.id = id
+    this.name = name;
+    this.cost = cost;
+    }
+
+    getCardPlayTiles(chessBoardArray, player) {
+      let tiles = []
+      switch (this.name) {
+        case "Fireball":
+          tiles = this.getFireballTiles(chessBoardArray, player);
+        default:
+          break;
+      }
+      console.log("Card selected. Possible tiles:")
+      console.log(tiles);
+      return tiles;
+    }
   
+    getFireballTiles(chessBoardArray, player) {
+      console.log("Getting fireball tiles...")
+      console.log(chessBoardArray)
+      let tiles = []
+      for (let i = 0; i < chessBoardArray.length; i++) {
+        //console.log("Looping through row " + i)
+        //console.log("Row length: " + chessBoardArray[i].length)
+        console.log(chessBoardArray[i])
+        for (let j = 0; j < chessBoardArray[i].length; j++) {
+          //console.log("Looping through column " + j)
+          let piece = chessBoardArray[i][j].piece
+          if (piece) {
+            if (piece.color === player.color) {
+              console.log("Looping through: " + piece.type + " at " + i + ", " + j)
+              //tiles.push({x: i, y: j})
+              let directions = [ 
+                { x: 1, y: 0 },
+                { x: -1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 0, y: -1 },
+                { x: 1, y: 1 },
+                { x: 1, y: -1 },
+                { x: -1, y: 1 },
+                { x: -1, y: -1 }
+              ]
+              for (let k = 0; k < directions.length; k++) {
+                let dx = directions[k].x
+                let dy = directions[k].y
+                let newX = i + dx
+                let newY = j + dy
+                while (newX >= 0 && newX < chessBoardArray.length && newY >= 0 && newY < chessBoardArray[i].length) {  
+                  if (chessBoardArray[newX][newY].piece === null) {
+                    //tiles.push({ x: newX, y: newY })
+                  } else {
+                    console.log(chessBoardArray[newX][newY].piece)
+                    if (chessBoardArray[newX][newY].piece) {
+                      if (chessBoardArray[newX][newY].piece.color !== piece.color) {
+                        tiles.push({ x: newX, y: newY })
+                      }
+                      break
+                  }
+                  }
+                  newX += dx
+                  newY += dy
+                }
+              }
+            }
+          }
+          
+        }
+      }
+      
+      return tiles;
+    }
+  }
+
+class CardDataManager {
+  constructor() {
+    this.cardData = []
+    this.loadCardData()
+  }
+
+  loadCardData() { //This has to be copy-paste identical to the one on the client side. Maybe this information could be sent to the client from the server?
+    const placeholderCardData = {
+      id: 1,
+      name: "Placeholder",
+      cost: 1
+  };
+  this.cardData.push(placeholderCardData);
+  const fireBallCardData = {
+    id: 2,
+    name: "Fireball",
+    cost: 3
+  };
+  this.cardData.push(fireBallCardData);
+  }
+
+  cardExists(name) {
+    return this.cardData.find(card => card.name === name);
+  }
+
+
+
+
+}
+
+let cardDataManager = new CardDataManager();
+  
+

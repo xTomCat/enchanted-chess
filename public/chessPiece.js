@@ -46,7 +46,7 @@ class ChessPiece {
      push();
      rotateX(PI / 2);
      scale(25);
-     noStroke();
+     //noStroke();
      texture(this.texture);
      model(this.model);
      pop();
@@ -164,19 +164,10 @@ class ChessPiece {
           }
         }
         if (rightEnPassant.x >= 0 && rightEnPassant.x < chessBoardObject.getWidth() && rightEnPassant.y >= 0 && rightEnPassant.y < chessBoardObject.getHeight()) {
-          console.log("a")
-          console.log("Checking coords: ", rightEnPassant.x, rightEnPassant.y)
           if (chessBoard[rightEnPassant.x][rightEnPassant.y].piece) {
-            console.log("b")
             let enemyPiece = chessBoard[rightEnPassant.x][rightEnPassant.y].piece
-            console.log(enemyPiece)
-            console.log("Type: ", enemyPiece.type)
-            console.log("Color: ", enemyPiece.color)
-            console.log("Last move: ", enemyPiece.lastMove)
-            console.log("Amount of spaces moved: " + Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y))
 
             if (enemyPiece.type === "pawn" && enemyPiece.color !== piece.color && enemyPiece.lastMove === Math.abs(enemyPiece.lastMove.to.y - enemyPiece.lastMove.from.y) === 2) {
-              console.log("c")
               rightEnPassant.y += direction
               moves.push(rightEnPassant)
             }

@@ -89,6 +89,7 @@ class Chessboard {
         this.setTileData(i, j, { piece: null });
       }
     }
+    return this
   }
   move(move) {
     let from = move.from;
@@ -278,19 +279,23 @@ class Chessboard {
     push()
     if (guiRenderer) {
       if (guiRenderer.getState() == "menu") {
-      
-      translate(this.height * this.tileSize / 2, 0, 0);
-      rotateY(this.rotAngle);
-      this.rotAngle += 0.002;
-      }
-      else if (guiRenderer.getState() == "game" && (frameCount - guiRenderer.screenSwitchTimeStamp) < 100) {
-        let t = (frameCount - guiRenderer.screenSwitchTimeStamp)/100
-        console.log(t)
-        let tempRot = this.rotAngle - easeOutQuad(t, 0, this.rotAngle, 1);
-        let translateX = (this.height * this.tileSize / 2) - easeOutQuad(t, 0, this.height * this.tileSize / 2, 1);
+      if ((totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp) < 100) {
+        let t = (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp)/100;
+        let tempRot = easeOutQuad(t, 0, this.rotAngle, 1);
+        let translateX = easeOutQuad(t, 0, this.height * this.tileSize / 2, 1);
         translate(translateX, 0, 0);
         rotateY(tempRot);
-        console.log("Translate: " + translateX)
+      } else {
+        translate(this.height * this.tileSize / 2, 0, 0);
+        rotateY(this.rotAngle);
+        this.rotAngle += 0.002 * deltaTime * targetFrameRate;
+      }
+      } else if (guiRenderer.getState() == "game" && (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp) < 100) {
+      let t = (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp)/100;
+      let tempRot = this.rotAngle - easeOutQuad(t, 0, this.rotAngle, 1);
+      let translateX = (this.height * this.tileSize / 2) - easeOutQuad(t, 0, this.height * this.tileSize / 2, 1);
+      translate(translateX, 0, 0);
+      rotateY(tempRot);
       }
     }
     gl.cullFace(gl.FRONT)
@@ -395,6 +400,7 @@ class Chessboard {
     }
     pop()
     }
+
   selectTile(x, y) {
     let chessBoard = this.chessBoard;
     let pieceMoved = false;
@@ -404,6 +410,12 @@ class Chessboard {
       return;
     }
 
+
+    if (cardDataManager.getSelectedCard) {
+      cardDataManager.requestPlayCard(x, y)
+      return;
+    }
+    
     if (!chessBoard[x][y].selected) {
       for (let i = 0; i < this.width; i++) {
         for (let j = 0; j < this.height; j++) {
@@ -412,6 +424,7 @@ class Chessboard {
                 from: { x: i, y: j },
                 to: { x: x, y: y }
               };
+              console.log(move)
               this.move(move);
               socket.emit('move', move);
               pieceMoved = true;
@@ -441,6 +454,14 @@ class Chessboard {
       this.resetAvailableMoves()
     }
   }
+  resetSelectedTiles() {
+    let chessBoard = this.chessBoard;
+    for (let i = 0; i < this.width; i++) {
+      for (let j = 0; j < this.height; j++) {
+        chessBoard[i][j].selected = false;
+      }
+  }
+}
   resetAvailableMoves() {
     let chessBoard = this.chessBoard;
     //loop through the board, setting all tiles to unavailable
