@@ -407,6 +407,13 @@ class Game {
         return;
       }
       let piece = this.getTileData(from.x, from.y).piece;
+
+      // Validate that the piece belongs to the player whose turn it is
+      if (piece.color !== this.turn) {
+        console.log("Invalid move: not this player's turn");
+        return;
+      }
+
       let availableMoves = piece.getAvailableMoves(this, from.x, from.y);
 
       if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {

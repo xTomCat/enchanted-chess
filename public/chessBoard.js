@@ -411,7 +411,7 @@ class Chessboard {
     }
 
 
-    if (cardDataManager.getSelectedCard) {
+    if (cardDataManager.getSelectedCard()) {
       cardDataManager.requestPlayCard(x, y)
       return;
     }
@@ -437,15 +437,20 @@ class Chessboard {
         chessBoard[x][y].selected = false;
         this.resetAvailableMoves()
       } else {
+        // Only allow selecting pieces when it's your turn and the piece is yours
+        if (gameData.turn !== color) {
+          return;
+        }
+        if (chessBoard[x][y].piece && chessBoard[x][y].piece.getColor() !== color) {
+          return;
+        }
+
         chessBoard[x][y].selected = true;
         this.resetAvailableMoves()
 
-        //Added this to get the available moves for the selected piece - only works if same color
+        //Added this to get the available moves for the selected piece
         if (chessBoard[x][y].piece) {
           availableMoves = this.getTileData(x, y).piece.getAvailableMoves(this, x, y);
-        }
-
-        if (availableMoves != null && chessBoard[x][y].piece.getColor() == color) {
           this.markAvailableMoves(availableMoves)
         }
       }
