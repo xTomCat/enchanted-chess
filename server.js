@@ -1,16 +1,28 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const { v4: uuidv4 } = require('uuid');
+const PieceMovement = require('./public/shared/pieceMovement.js');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-const { v4: uuidv4 } = require('uuid');
 
 const PORT = process.env.PORT || 3000;
 
 let connectedPlayers = [];
 let games = {};
+
+// Input validation helper
+function validateMoveFormat(move) {
+    if (!move || typeof move !== 'object') return false;
+    if (!move.from || !move.to) return false;
+    if (!Number.isInteger(move.from.x) || !Number.isInteger(move.from.y)) return false;
+    if (!Number.isInteger(move.to.x) || !Number.isInteger(move.to.y)) return false;
+    if (move.from.x < 0 || move.from.x > 7 || move.from.y < 0 || move.from.y > 7) return false;
+    if (move.to.x < 0 || move.to.x > 7 || move.to.y < 0 || move.to.y > 7) return false;
+    return true;
+}
 
 app.use(express.static('public'));
 
@@ -21,61 +33,92 @@ io.on('connection', (socket) => {
     logConnectedPlayers();
     
     socket.on('move', (move) => {
-        const player = connectedPlayers.find(p => p.socketId === socket.id) //For some reason removing this sometimes breaks stuff????? why?????????
-        console.log("Player attributes: " + player.name + " " + player.color + " " + player.socketId)
+        const player = connectedPlayers.find(p => p.socketId === socket.id)
 
-        if (player) {
-            const game = Object.values(games).find(g => g.players.includes(player))
-            if (game) {
-                game.move(move)
-                io.to('game-' + game.roomCode).emit('move', move)
-                sendGameDataToRoom(game.roomCode)
-            }
+        if (!player) {
+            socket.emit('error', 'You need to set a nickname first!')
+            return
+        }
+
+        if (!validateMoveFormat(move)) {
+            socket.emit('moveRejected', { reason: 'invalid_format' })
+            return
+        }
+
+        const game = Object.values(games).find(g => g.players.includes(player))
+        if (!game) {
+            socket.emit('moveRejected', { reason: 'not_in_game' })
+            return
+        }
+
+        // Verify this player is the one whose turn it is
+        if ((game.turn === 'white' && player !== game.players[0]) ||
+            (game.turn === 'black' && player !== game.players[1])) {
+            socket.emit('moveRejected', { reason: 'not_your_turn' })
+            return
+        }
+
+        const result = game.move(move)
+        if (result.success) {
+            io.to('game-' + game.roomCode).emit('move', move)
+            sendGameDataToRoom(game.roomCode)
         } else {
-            io.to(socket.id).emit('error', 'You need to set a nickname first!')
+            socket.emit('moveRejected', { reason: result.reason })
         }
     });
 
     socket.on('playCard', (index, x, y) => {
       const player = connectedPlayers.find(p => p.socketId === socket.id)
       if (!player) {
-        console.log("Player not found!")
+        socket.emit('error', 'Player not found')
         return
       }
+
+      if (player.pendingCardPlay) {
+        socket.emit('error', 'Card play already in progress')
+        return
+      }
+
+      if (!Number.isInteger(index) || !Number.isInteger(x) || !Number.isInteger(y)) {
+        socket.emit('error', 'Invalid card play parameters')
+        return
+      }
+      if (x < 0 || x > 7 || y < 0 || y > 7) {
+        socket.emit('error', 'Invalid target coordinates')
+        return
+      }
+
       const game = Object.values(games).find(g => g.players.includes(player))
       if (!game) {
-        console.log("Game not found!")
+        socket.emit('error', 'Not in a game')
         return
       }
-      console.log("--------------------")
-      console.log("Player's deck:")
-      for (let i = 0; i < player.deck.length; i++) {
-        console.log("Index: " + i)
-        console.log(player.deck[i])
-      }
-      console.log("--------------------")
+
       if (!player.deck[index]) {
-        console.log("Card not found!")
+        socket.emit('error', 'Card not found in deck')
         return
       }
+
+      player.pendingCardPlay = true
       let card = player.deck[index]
-      console.log("Cost: " + card.cost)
-      if (card.cost <= player.energy) {
+
+      try {
+        if (card.cost > player.energy) {
+          socket.emit('error', 'Not enough energy')
+          return
+        }
+
         if (game.activateCardEffect(card, x, y, player)) {
           player.energy -= card.cost
           player.removeCardFromDeck(index)
           console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y)
-          //sendGameDataToRoom(game.roomCode)
-          io.to('game-' + game.roomCode).emit('recievePlayCard', player.color, index, x, y, card)
+          io.to('game-' + game.roomCode).emit('receivePlayCard', player.color, index, x, y, card)
         } else {
-          console.log("Invalid!")
+          socket.emit('error', 'Invalid card target')
         }
-        
-      } else {
-        console.log("Player " + player.name + " tried to play a card without enough energy!")
+      } finally {
+        player.pendingCardPlay = false
       }
-        
-      
     });
 
     socket.on('recieveDeck', (deck) => {
@@ -267,6 +310,7 @@ class Player {
       this.deck = [];
       this.socketId = socketId;
       this.color = "unset!";
+      this.pendingCardPlay = false;
     }
 
     setDeck(deck) {
@@ -403,69 +447,62 @@ class Game {
     move(move) {
       let from = move.from;
       let to = move.to;
+
       if (!this.getTileData(from.x, from.y).piece) {
-        return;
+        return { success: false, reason: 'no_piece' };
       }
+
       let piece = this.getTileData(from.x, from.y).piece;
 
       // Validate that the piece belongs to the player whose turn it is
       if (piece.color !== this.turn) {
-        console.log("Invalid move: not this player's turn");
-        return;
+        return { success: false, reason: 'wrong_color' };
       }
 
       let availableMoves = piece.getAvailableMoves(this, from.x, from.y);
 
-      if (availableMoves.find(m => m.x === to.x && m.y === to.y)) {
-        this.setTileData(to.x, to.y, { piece: piece });
-        this.setTileData(from.x, from.y, { piece: null });
-        piece.lastMove = move
-        this.lastMove = move
-        this.lastMovedPiece = piece
-
-        if (this.isInCheck("black")) {
-          this.check = "black"
-          if (this.isCheckMate("black")) {
-            this.checkMate = "black"
-            this.state = "checkmate"
-            sendGameDataToRoom(this.roomCode)
-            console.log("Checkmate!")
-            this.close()
-          }
-        } else if (this.isInCheck("white")) {
-          this.check = "white"
-          if (this.isCheckMate("white")) {
-            this.checkMate = "white"
-            this.state = "checkmate"
-            sendGameDataToRoom(this.roomCode)
-            console.log("Checkmate!")
-            this.close()
-          }
-        } else {
-          this.check = null
-        }
-
-        if (this.isInCheck(this.turn)) {
-          this.setTileData(to.x, to.y, { piece: null });
-          this.setTileData(from.x, from.y, { piece: piece });
-          return;
-        }
-
-        if (this.turn === "white") {
-          this.turn = "black";
-        } else {
-          this.turn = "white";
-        }
+      if (!availableMoves.find(m => m.x === to.x && m.y === to.y)) {
+        return { success: false, reason: 'invalid_move' };
       }
-      else {
-        let player
-        if (this.turn === "white") {
-          player = this.players[0]
-        } else {
-          player = this.players[1]
-        }
-        console.log("Player ''" + player.name + "'' tried to make an invalid move!");
+
+      this.setTileData(to.x, to.y, { piece: piece });
+      this.setTileData(from.x, from.y, { piece: null });
+      piece.lastMove = move
+      this.lastMove = move
+      this.lastMovedPiece = piece
+
+      if (this.isInCheck(this.turn)) {
+        this.setTileData(to.x, to.y, { piece: null });
+        this.setTileData(from.x, from.y, { piece: piece });
+        return { success: false, reason: 'exposes_king' };
       }
+
+      if (this.isInCheck("black")) {
+        this.check = "black"
+        if (this.isCheckMate("black")) {
+          this.checkMate = "black"
+          this.state = "checkmate"
+          sendGameDataToRoom(this.roomCode)
+          console.log("Checkmate!")
+          this.close()
+        }
+      } else if (this.isInCheck("white")) {
+        this.check = "white"
+        if (this.isCheckMate("white")) {
+          this.checkMate = "white"
+          this.state = "checkmate"
+          sendGameDataToRoom(this.roomCode)
+          console.log("Checkmate!")
+          this.close()
+        }
+      } else {
+        this.check = null
+      }
+
+      // Switch turns
+      this.turn = this.turn === "white" ? "black" : "white";
+
+      return { success: true };
     }
     populateBoard() {
         for (let i = 0; i < this.width; i++) {
@@ -656,7 +693,7 @@ class Game {
     sendFakePiece(x, y, piece, player) {
       let fakePiece = new ChessPiece(piece.type, piece.color)
       //this.fakePieceQueue.push({x: x, y: y, piece: fakePiece})
-      io.to(player.socketId).emit('recieveFakePiece', x, y, fakePiece)
+      io.to(player.socketId).emit('receiveFakePiece', x, y, fakePiece)
     }
 
     clearFakePieceQueue() {
@@ -667,253 +704,49 @@ class Game {
 
 class ChessPiece {
     constructor(type, color) {
-      this.color = color
-      this.type = type
-      this.lastMove = null
+      this.color = color;
+      this.type = type;
+      this.lastMove = null;
     }
-      getType() {
-        return this.type;
-      }
-  
-      getColor() {
-        return this.color;
-      }
-      getAvailableMoves(Game, x, y) {
-        let chessBoard = Game.getBoard();
-        let piece = chessBoard[x][y].piece;
-        let moves = [];
-        switch (piece.type) {
-          case "pawn":
-            moves = this.getPawnMoves(Game, x, y);
-            break;
-          case "rook":
-            moves = this.getRookMoves(Game, x, y);
-            break;
-          case "knight":
-            moves = this.getKnightMoves(Game, x, y);
-            break;
-          case "bishop":
-            moves = this.getBishopMoves(Game, x, y);
-            break;
-          case "queen":
-            moves = this.getQueenMoves(Game, x, y);
-            break;
-          case "king":
-            moves = this.getKingMoves(Game, x, y);
-            break;
-        }
-        if (Game.check && this.color === Game.check) {
-          let newMoves = []
-          for (let i = 0; i < moves.length; i++) {
-            let move = moves[i]
-            let tempPiece = chessBoard[move.x][move.y].piece
-            chessBoard[move.x][move.y].piece = piece
-            chessBoard[x][y].piece = null
-            let check = Game.isInCheck(this.color)
-            if (!check) {
-              newMoves.push(move)
-            }
-            chessBoard[move.x][move.y].piece = tempPiece
-            chessBoard[x][y].piece = piece
-            moves = newMoves
-          }
-        } 
-        return moves;
-      }
-    
-      getPawnMoves(Game, x, y) {
-        let chessBoard = Game.getBoard();
-        let chessPiece = chessBoard[x][y].piece;
-        let moves = [];
-        let direction = chessPiece.color === "white" ? -1 : 1;
-        let forwardOne = { x: x, y: y + direction }
-        let forwardTwo = { x: x, y: y + 2 * direction }
-        let leftCapture = { x: x - 1, y: y + direction, enPassant: false }
-        let rightCapture = { x: x + 1, y: y + direction, enPassant: false }
-        if (forwardOne.x >= 0 && forwardOne.x < Game.getWidth() && forwardOne.y >= 0 && forwardOne.y < Game.getHeight()) {
-          if (!chessBoard[forwardOne.x][forwardOne.y].piece) {
-            moves.push(forwardOne)
-            if (!(forwardTwo.x >= 0 && forwardTwo.x < Game.getWidth() && forwardTwo.y >= 0 && forwardTwo.y < Game.getHeight())) {
-              return;
-            }
-            if (!chessBoard[forwardTwo.x][forwardTwo.y].piece && (chessPiece.color === "white" && y === 6) || (chessPiece.color === "black" && y === 1)) {
-              moves.push(forwardTwo)
-            }
-          }
-          if (leftCapture.x >= 0 && leftCapture.x < Game.getWidth() && leftCapture.y >= 0 && leftCapture.y < Game.getHeight()) {
-            if (chessBoard[leftCapture.x][leftCapture.y].piece) {
-              if (chessBoard[leftCapture.x][leftCapture.y].piece.color !== chessPiece.color) {
-                moves.push(leftCapture)
-              }
-            }
-          }
-          if (rightCapture.x >= 0 && rightCapture.x < Game.getWidth() && rightCapture.y >= 0 && rightCapture.y < Game.getHeight()) {
-            if (chessBoard[rightCapture.x][rightCapture.y].piece) {
-              if (chessBoard[rightCapture.x][rightCapture.y].piece.color !== chessPiece.color) {
-                moves.push(rightCapture)
-            }//WIP EN PASSANT
-          }
-          }
 
+    getType() {
+      return this.type;
+    }
 
-        }
-        return moves
-      
-      }
-    
-      getRookMoves(Game, x, y) {
-        let chessBoard = Game.getBoard();
-        let piece = chessBoard[x][y].piece;
-        let moves = [];
-        let directions = [
-          { x: 1, y: 0 },
-          { x: -1, y: 0 },
-          { x: 0, y: 1 },
-          { x: 0, y: -1 }
-        ]
-        for (let i = 0; i < directions.length; i++) {
-          let dx = directions[i].x
-          let dy = directions[i].y
-          let newX = x + dx
-          let newY = y + dy
-          while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (!chessBoard[newX][newY].piece) {
-              moves.push({ x: newX, y: newY })
-            } else {
-              if (chessBoard[newX][newY].piece.color !== piece.color) {
-                moves.push({ x: newX, y: newY })
-              }
-              break
-            }
-            newX += dx
-            newY += dy
-          }
-        }
-        return moves
-      }
-      
-    
-      getKnightMoves(Game, x, y) {
-        let chessBoard = Game.getBoard()
-        let piece = chessBoard[x][y].piece
-        let moves = []
-        let targets = [
-          { x: -1, y: 2 },
-          { x: 1, y: 2 },
-          { x: 2, y: 1 },
-          { x: 2, y: -1 },
-          { x: -2, y: 1 },
-          { x: -2, y: -1 },
-          { x: -1, y: -2 },
-          { x: 1, y: -2 }
-        ]
-    
-        for (let i = 0; i < targets.length; i++) {
-          let newX = x + targets[i].x
-          let newY = y + targets[i].y
-          if (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (!chessBoard[newX][newY].piece || chessBoard[newX][newY].piece.color !== piece.color) {
-              moves.push({ x: newX, y: newY })
-            }
-          }
-        }
-        return moves
-      }
-    
-      getBishopMoves(Game, x, y) {
-        let chessBoard = Game.getBoard()
-        let piece = chessBoard[x][y].piece
-        let moves = []
-        let directions = [
-          { x: 1, y: 1 },
-          { x: 1, y: -1 },
-          { x: -1, y: 1 },
-          { x: -1, y: -1 }
-        ]
-        for (let i = 0; i < directions.length; i++) {
-          let dx = directions[i].x
-          let dy = directions[i].y
-          let newX = x + dx
-          let newY = y + dy
-          while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (!chessBoard[newX][newY].piece) {
-              moves.push({ x: newX, y: newY })
-            } else {
-              if (chessBoard[newX][newY].piece.color !== piece.color) {
-                moves.push({ x: newX, y: newY })
-              }
-              break
-            }
-            newX += dx
-            newY += dy
-          }
-        }
-        return moves
+    getColor() {
+      return this.color;
     }
-    
-      getQueenMoves(Game, x, y) {
-        let chessBoard = Game.getBoard()
-        let piece = chessBoard[x][y].piece
-        let moves = []
-        let directions = [ 
-          { x: 1, y: 0 },
-          { x: -1, y: 0 },
-          { x: 0, y: 1 },
-          { x: 0, y: -1 },
-          { x: 1, y: 1 },
-          { x: 1, y: -1 },
-          { x: -1, y: 1 },
-          { x: -1, y: -1 }
-        ]
-        for (let i = 0; i < directions.length; i++) {
-          let dx = directions[i].x
-          let dy = directions[i].y
-          let newX = x + dx
-          let newY = y + dy
-          while (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (!chessBoard[newX][newY].piece) {
-              moves.push({ x: newX, y: newY })
-            } else {
-              if (chessBoard[newX][newY].piece.color !== piece.color) {
-                moves.push({ x: newX, y: newY })
-              }
-              break
-            }
-            newX += dx
-            newY += dy
+
+    getAvailableMoves(Game, x, y) {
+      const chessBoard = Game.getBoard();
+      const piece = chessBoard[x][y].piece;
+
+      // Use shared movement logic
+      let moves = PieceMovement.getAvailableMoves(Game, x, y, piece);
+
+      // Filter moves if in check
+      if (Game.check && this.color === Game.check) {
+        const newMoves = [];
+        for (const move of moves) {
+          const tempPiece = chessBoard[move.x][move.y].piece;
+          // Simulate the move
+          chessBoard[move.x][move.y].piece = piece;
+          chessBoard[x][y].piece = null;
+          // Check if still in check
+          if (!Game.isInCheck(this.color)) {
+            newMoves.push(move);
           }
+          // Revert
+          chessBoard[move.x][move.y].piece = tempPiece;
+          chessBoard[x][y].piece = piece;
         }
-        return moves
+        moves = newMoves;
       }
-    
-      getKingMoves(Game, x, y) {
-        let chessBoard = Game.getBoard()
-        let piece = chessBoard[x][y].piece
-        let moves = []
-        let directions = [
-          { x: 1, y: 0 },
-          { x: -1, y: 0 },
-          { x: 0, y: 1 },
-          { x: 0, y: -1 },
-          { x: 1, y: 1 },
-          { x: 1, y: -1 },
-          { x: -1, y: 1 },
-          { x: -1, y: -1 }
-        ]
-        for (let i = 0; i < directions.length; i++) {
-          let dx = directions[i].x
-          let dy = directions[i].y
-          let newX = x + dx
-          let newY = y + dy
-          if (newX >= 0 && newX < Game.getWidth() && newY >= 0 && newY < Game.getHeight()) {
-            if (!chessBoard[newX][newY].piece || chessBoard[newX][newY].piece.color !== piece.color) {
-              moves.push({ x: newX, y: newY })
-            }
-          }
-        }
-        return moves
-      }
+      return moves;
     }
+
+    // Movement logic now handled by shared/pieceMovement.js
+}
 
 class Card {
   constructor(id, name, cost) {

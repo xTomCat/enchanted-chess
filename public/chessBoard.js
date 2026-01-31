@@ -6,10 +6,10 @@ class Chessboard {
     this.whiteTexture = whiteTexture;
     this.blackTexture = blackTexture;
     this.chessBoard = []
-    this.textures = []
     this.rotAngle = 0
 
-   
+    this.textures = [];
+
     //Loop through the board height
     for (let i = 0; i < this.height; i++) {
       this.chessBoard.push([]);
@@ -29,17 +29,16 @@ class Chessboard {
           sx = random(this.whiteTexture.width - resolution);
           sy = random(this.whiteTexture.height - resolution);
           tileGraphic.image(this.whiteTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-
         } else if (this.chessBoard[i][j].type == "black"){
           sx = random(this.blackTexture.width - resolution);
           sy = random(this.blackTexture.height - resolution);
           tileGraphic.image(this.blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-          
         }
         this.textures.push(tileGraphic);
       }
     }
-    
+
+    // Calculate tile world positions
     let offsetX = (this.chessBoard[0].length - 1) * (this.tileSize / 2) - (this.tileSize / 2);
     let offsetY = (this.chessBoard.length - 1) * (this.tileSize / 2) - (this.tileSize / 2);
     for (let i = 0; i < this.chessBoard.length; i++) {
@@ -49,18 +48,17 @@ class Chessboard {
         this.chessBoard[i][j].z = (i * tileSize) - offsetY - (this.tileSize/2);
       }
     }
-    
 
-    
+  }
+
+  getTileTexture(i, j) {
+    return this.textures[i * this.width + j];
   }
   getBoard() {
     return this.chessBoard
   }
   getTileSize() {
     return this.tileSize
-  }
-  getTileTexture(i, j) {
-    return this.textures[i * this.width + j];
   }
   getHeight() {
     return this.height
@@ -222,19 +220,19 @@ class Chessboard {
     let height = _renderer.height;
     // convert mouse coordinates to NDC
     let xNDC = (2 * mouseX) / width - 1;
-    let yNDC = 1 - (2 * mouseY) / height;   
+    let yNDC = 1 - (2 * mouseY) / height;
 
     let projMatrix = _renderer.uPMatrix.mat4;
-    let viewMatrix = _renderer.uMVMatrix.mat4;    
+    let viewMatrix = _renderer.uMVMatrix.mat4;
     // combined transformation matrix (from projection and modelView matrices)
     let combinedMatrix = mat4.create();
-    mat4.multiply(combinedMatrix, projMatrix, viewMatrix);    
+    mat4.multiply(combinedMatrix, projMatrix, viewMatrix);
     // invert the combined matrix
     let invCombinedMatrix = mat4.create();
     mat4.invert(invCombinedMatrix, combinedMatrix);
     // transform the NDC coordinates to world coordinates for the near and far points
     let nearPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, -1], invCombinedMatrix);
-    let farPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, 1], invCombinedMatrix);   
+    let farPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, 1], invCombinedMatrix);
     // Normalize the ray direction
     let rayDir = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), farPoint, nearPoint));
     for (let x = 0; x < this.width; x++) {
@@ -243,26 +241,21 @@ class Chessboard {
           return worldToBoardIndices(chessBoard[x][y].x, chessBoard[x][y].z, this);
         }
       }
-    }   
+    }
     return null;
   }
 
   rayIntersectsTile(nearPoint, rayDir, x, y) {
-    //Initialise relevant variables
     let chessBoard = this.chessBoard;
     let tile = chessBoard[x][y];
     let tileSize = this.tileSize;
-    //Solve t for 0
     let t = -nearPoint[1] / rayDir[1];
-    //If the raycast is going in the wrong direction, instantly returns false
     if (t < 0) {
       return false
     };
-    //Calculation for the point of intersection
     let intersectPoint = vec3.create();
     vec3.scaleAndAdd(intersectPoint, nearPoint, rayDir, t);
-    let epsilon = 0.0001; // small epsilon value to avoid problems with precision
-    //calculate tile bounds based on the tile center coordinate and the tile size
+    let epsilon = 0.0001;
     let minX = (tile.x) - tileSize / 2;
     let maxX = (tile.x) + tileSize / 2;
     let minZ = (tile.z) - tileSize / 2;

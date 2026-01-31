@@ -101,6 +101,14 @@ function setup() {
     chessBoard.move(move)
   })
 
+    socket.on('moveRejected', (data) => {
+    console.log('Move rejected:', data.reason)
+    // Resync board state from server
+    if (gameData) {
+      compareBoard(chessBoard, gameData.board)
+    }
+  })
+
   socket.on('nicknameChanged', (changedNickname) => {
     console.log("Nickname changed to: " + changedNickname)
     nickname = changedNickname
@@ -110,7 +118,7 @@ function setup() {
     }
   })
 
-  socket.on('recievePlayCard', (pColor, index, x, y, card) => {
+  socket.on('receivePlayCard', (pColor, index, x, y, card) => {
     console.log(pColor + "is playing card with index: " + index)
     if (pColor == color) {
       
@@ -120,8 +128,8 @@ function setup() {
      }
   })
 
-  socket.on('recieveFakePiece', (x, y, piece) => {
-    console.log("Recieved fake piece")
+  socket.on('receiveFakePiece', (x, y, piece) => {
+    console.log("received fake piece")
     chessBoard.setTileData(x, y, {piece: new ChessPiece(piece.type, piece.color)})
   })
 
@@ -155,8 +163,8 @@ function setup() {
     console.log("Server requested deck")
   })
 
-  socket.on('gameData', (gameDataRecieved) => { 
-    gameData = gameDataRecieved
+  socket.on('gameData', (gameDataReceived) => { 
+    gameData = gameDataReceived
     console.log("gameData: ")
     console.log(gameData)
     if (guiRenderer) {
@@ -206,12 +214,12 @@ function setup() {
         
     }
   }
-    compareBoard(chessBoard, gameDataRecieved.board)
-    if (chessBoard && gameDataRecieved.lastMove) {
-      console.log(gameDataRecieved.lastMove)
-      let piece = chessBoard.getTileData(gameDataRecieved.lastMove.to.x, gameDataRecieved.lastMove.to.y).piece;
+    compareBoard(chessBoard, gameDataReceived.board)
+    if (chessBoard && gameDataReceived.lastMove) {
+      console.log(gameDataReceived.lastMove)
+      let piece = chessBoard.getTileData(gameDataReceived.lastMove.to.x, gameDataReceived.lastMove.to.y).piece;
        if (piece) {
-        piece.lastMove = gameDataRecieved.lastMove;
+        piece.lastMove = gameDataReceived.lastMove;
         
       }
     }
@@ -222,7 +230,7 @@ function setup() {
 
 
   socket.on('initBoard', (board) => {
-    console.log("init board recieved")
+    console.log("init board received")
     chessBoard.clearBoard()
     for (let i = 0; i < board.length; i++) {
       for (let j = 0; j < board[i].length; j++) {
