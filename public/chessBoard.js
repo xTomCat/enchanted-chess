@@ -403,6 +403,12 @@ class Chessboard {
       return;
     }
 
+    console.log(gameData)
+
+    if (gameData.state != "started") {
+      return;
+    }
+
 
     if (cardDataManager.getSelectedCard()) {
       cardDataManager.requestPlayCard(x, y)

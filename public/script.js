@@ -254,6 +254,7 @@ function setup() {
     }
     if (timeUntilLeaving == 0) {
       timeUntilLeaving = null
+      guiRenderer.ingameGuiElements.statusText.updateText("")
     }
   })
 }
