@@ -27,6 +27,7 @@ let totalTime = 0
 let totalTimeFloor = 0
 let targetFrameRate = 60
 let selectedThisClick = false
+let cardImages = {}
 const cardHeight = 435
 const cardWidth = 313
 
@@ -52,8 +53,7 @@ function preload() {
   manadiamondblue = loadImage('Assets/manadiamondblue.png')
   manadiamondgrey = loadImage('Assets/manadiamondgrey.png')
   manaorb = loadImage('Assets/manaorb.png')
-  placeholdercard = loadImage("Assets/backofcard.png")
-  fireballcard = loadImage("Assets/fireballcard.png")
+  for (const card of CardDefinitions.CARDS) cardImages[card.name] = loadImage(card.image)
 
   
 }
@@ -109,7 +109,7 @@ function setup() {
       
       cardDataManager.playCard(index, x, y)
      } else {
-       cardDataManager.activateCardEffect(card, x, y, true)
+       cardDataManager.activateCardEffect(card, x, y, true, pColor)
      }
   })
 

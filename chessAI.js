@@ -4,6 +4,8 @@
 
 const PieceMovement = require('./public/shared/pieceMovement.js');
 
+const CardDefinitions = require('./public/shared/cardDefinitions.js');
+
 const VALUE = { pawn: 100, knight: 320, bishop: 330, rook: 500, queen: 900, king: 20000 };
 const MATE = 1e6;
 const MAX_DEPTH = 3;
@@ -104,7 +106,7 @@ function bestCardTarget(card, game, player) {
   if (card.cost > player.energy) return null;
   const board = game.getBoard();
   let best = null;
-  for (const tile of card.getCardPlayTiles(board, player)) {
+  for (const tile of CardDefinitions.getPlayTiles(card.name, game, player.color)) {
     const piece = board[tile.x][tile.y].piece;
     if (piece && (!best || VALUE[piece.type] > VALUE[best.piece.type])) best = { x: tile.x, y: tile.y, piece };
   }

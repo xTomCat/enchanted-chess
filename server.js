@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const PieceMovement = require('./public/shared/pieceMovement.js');
 const ChessAI = require('./chessAI.js');
+const CardDefinitions = require('./public/shared/cardDefinitions.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -667,34 +668,14 @@ class Game {
     }
 
     activateCardEffect(card, x, y, player) {
-      switch (card.name) {
-        case "Placeholder":
-          console.log("Placeholder card effect activated in game " + this.roomCode + " at location " + x + ", " + y);
-          break;
-        case "Fireball":
-          let availableTiles = card.getCardPlayTiles(this.getBoard(), player);
-          if (availableTiles.length === 0) {
-            console.log("No valid targets for Fireball.")
-            return;
-          }
-            let isValidTarget = availableTiles.some(tile => tile.x === x && tile.y === y);
-            if (!isValidTarget) {
-            console.error("Invalid target for Fireball.");
-            return false;
-            }
-            console.log("Fireball hits target at " + x + ", " + y);
-            let fakePiece = this.getTileData(x, y).piece;
-            this.setTileData(x, y, {piece: null});
-            sendGameDataToRoom(this.roomCode)
-            this.sendFakePiece(x, y, fakePiece, player)
-            return true
-            // Add logic to handle the effect of the Fireball card on the target
-          break;
-        default:
-          console.error("Card effect not found.");
-          break;
+      const before = this.getTileData(x, y).piece;
+      if (!CardDefinitions.applyEffect(card.name, this, x, y, player.color)) {
+        console.error("Invalid target for " + card.name);
+        return false;
       }
-  
+      sendGameDataToRoom(this.roomCode)
+      if (before && !this.getTileData(x, y).piece) this.sendFakePiece(x, y, before, player)
+      return true
     }
 
     sendFakePiece(x, y, piece, player) {
@@ -761,67 +742,6 @@ class Card {
     this.name = name;
     this.cost = cost;
     }
-
-    getCardPlayTiles(chessBoardArray, player) {
-      let tiles = []
-      switch (this.name) {
-        case "Fireball":
-          tiles = this.getFireballTiles(chessBoardArray, player);
-        default:
-          break;
-      }
-      return tiles;
-    }
-  
-    getFireballTiles(chessBoardArray, player) {
-      let tiles = []
-      for (let i = 0; i < chessBoardArray.length; i++) {
-        //console.log("Looping through row " + i)
-        //console.log("Row length: " + chessBoardArray[i].length)
-        for (let j = 0; j < chessBoardArray[i].length; j++) {
-          //console.log("Looping through column " + j)
-          let piece = chessBoardArray[i][j].piece
-          if (piece) {
-            if (piece.color === player.color) {
-              //tiles.push({x: i, y: j})
-              let directions = [ 
-                { x: 1, y: 0 },
-                { x: -1, y: 0 },
-                { x: 0, y: 1 },
-                { x: 0, y: -1 },
-                { x: 1, y: 1 },
-                { x: 1, y: -1 },
-                { x: -1, y: 1 },
-                { x: -1, y: -1 }
-              ]
-              for (let k = 0; k < directions.length; k++) {
-                let dx = directions[k].x
-                let dy = directions[k].y
-                let newX = i + dx
-                let newY = j + dy
-                while (newX >= 0 && newX < chessBoardArray.length && newY >= 0 && newY < chessBoardArray[i].length) {  
-                  if (chessBoardArray[newX][newY].piece === null) {
-                    //tiles.push({ x: newX, y: newY })
-                  } else {
-                    if (chessBoardArray[newX][newY].piece) {
-                      if (chessBoardArray[newX][newY].piece.color !== piece.color && chessBoardArray[newX][newY].piece.type !== "king") {
-                        tiles.push({ x: newX, y: newY })
-                      }
-                      break
-                  }
-                  }
-                  newX += dx
-                  newY += dy
-                }
-              }
-            }
-          }
-          
-        }
-      }
-      
-      return tiles;
-    }
   }
 
 class CardDataManager {
@@ -830,19 +750,8 @@ class CardDataManager {
     this.loadCardData()
   }
 
-  loadCardData() { //This has to be copy-paste identical to the one on the client side. Maybe this information could be sent to the client from the server?
-    const placeholderCardData = {
-      id: 1,
-      name: "Placeholder",
-      cost: 1
-  };
-  this.cardData.push(placeholderCardData);
-  const fireBallCardData = {
-    id: 2,
-    name: "Fireball",
-    cost: 3
-  };
-  this.cardData.push(fireBallCardData);
+  loadCardData() {
+    this.cardData = CardDefinitions.CARDS.map(card => ({ id: card.id, name: card.name, cost: card.cost }));
   }
 
   cardExists(name) {

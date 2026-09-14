@@ -8,26 +8,9 @@ class CardDataManager {
     }
 
     init() {
-        const placeholderCardData = {
-          id: 1,
-          name: "Placeholder",
-          description: "This card does nothing.<br> It can be played, but has no effect.<br><br>Cost: 1",
-          cost: 1,
-          image: placeholdercard
-        };
-        this.cardData.push(placeholderCardData);
-        const fireBallCardData = {
-          id: 2,
-          name: "Fireball",
-          description: "Eliminates 1 enemy piece within<br>eyesight of any friendly piece.<br><br>Cost: 3",
-          cost: 3,
-          image: fireballcard
-        };
-        this.cardData.push(fireBallCardData);
-        let card = new CardObject(placeholderCardData);
-        this.cardObjects.push(card);
+        this.cardData = CardDefinitions.CARDS.map(card => ({ ...card, image: cardImages[card.name] }));
+        this.cardObjects.push(new CardObject(this.cardData[0]));
         this.resetDeck()
-        
     }
 
     resetDeck() {
@@ -144,59 +127,27 @@ class CardDataManager {
           return;
 
         }
-        switch (card.name) {
-          case "Fireball":
-            let availableTiles = card.getCardPlayTiles(chessBoard);
-            if (availableTiles.length === 0) {
-              console.log("No valid targets for Fireball.")
-              return;
-            }
-              let isValidTarget = availableTiles.some(tile => tile.x === x && tile.y === y);
-              if (!isValidTarget) {
-              console.error("Invalid target for Fireball.");
-              return;
-              }
-              console.log("Fireball hits target at " + x + ", " + y);
-              // Add logic to handle the effect of the Fireball card on the target
-              break;
-            }
+        if (!CardDefinitions.isValidTarget(card.name, chessBoard, x, y, color)) {
+          console.error("Invalid target for " + card.name);
+          return;
+        }
       }
       socket.emit('playCard', cardIndex, x, y);
 
     }
 
-    activateCardEffect(card, x, y, opponent = false) {
+    activateCardEffect(card, x, y, opponent = false, caster = color) {
       if (!opponent) {
         let index = this.getCardIndex(card);
         console.log("Activating card effect for card with name " + card.name + " at location " + x + ", " + y);
         cardDataManager.removeCardFromDeck(index);
         cardDataManager.updateCardPositions();
       }
-      switch (card.name) {
-        case "Placeholder":
-          console.log("Placeholder card effect activated.");
-          break;
-        case "Fireball":
-          let availableTiles = card.getCardPlayTiles(chessBoard);
-          if (availableTiles.length === 0) {
-            console.log("No valid targets for Fireball.")
-            return;
-          }
-            let isValidTarget = availableTiles.some(tile => tile.x === x && tile.y === y);
-            if (!isValidTarget) {
-            console.error("Invalid target for Fireball.");
-            return;
-            }
-            console.log("Fireball hits target at " + x + ", " + y);
-            chessBoard.setTileData(x, y, {piece: null});
-            chessBoard.resetAvailableMoves()
-            // Add logic to handle the effect of the Fireball card on the target
-            break;
-        default:
-          console.error("Card effect not found.");
-          break;
+      if (!CardDefinitions.applyEffect(card.name, chessBoard, x, y, caster)) {
+        console.error("Invalid target for " + card.name);
+        return;
       }
-
+      chessBoard.resetAvailableMoves()
     }
 
     updateCardPositions() {
@@ -250,71 +201,7 @@ class CardObject {
    }
 
    getCardPlayTiles(chessBoard) {
-    let chessBoardArray = chessBoard.getBoard()
-    console.log("Chessboard:")
-    console.log(chessBoard)
-    let tiles = []
-    switch (this.name) {
-      case "Fireball":
-        tiles = this.getFireballTiles(chessBoardArray);
-      default:
-        break;
-    }
-    console.log("Card selected. Possible tiles:")
-    console.log(tiles);
-    return tiles;
-  }
-
-  getFireballTiles(chessBoardArray) {
-    console.log("Getting fireball tiles...")
-    console.log(chessBoardArray)
-    let tiles = []
-    for (let i = 0; i < chessBoardArray.length; i++) {
-      //console.log("Looping through row " + i)
-      //console.log("Row length: " + chessBoardArray[i].length)
-      console.log(chessBoardArray[i])
-      for (let j = 0; j < chessBoardArray[i].length; j++) {
-        //console.log("Looping through column " + j)
-        let piece = chessBoard.getTileData(i, j).piece
-        if (piece) {
-          if (piece.color === color) {
-            console.log("Looping through: " + piece.type + " at " + i + ", " + j)
-            //tiles.push({x: i, y: j})
-            let directions = [ 
-              { x: 1, y: 0 },
-              { x: -1, y: 0 },
-              { x: 0, y: 1 },
-              { x: 0, y: -1 },
-              { x: 1, y: 1 },
-              { x: 1, y: -1 },
-              { x: -1, y: 1 },
-              { x: -1, y: -1 }
-            ]
-            for (let k = 0; k < directions.length; k++) {
-              let dx = directions[k].x
-              let dy = directions[k].y
-              let newX = i + dx
-              let newY = j + dy
-              while (newX >= 0 && newX < chessBoardArray.length && newY >= 0 && newY < chessBoardArray[i].length) {  
-                if (chessBoardArray[newX][newY].piece === null) {
-                  //tiles.push({ x: newX, y: newY })
-                } else {
-                  if (chessBoardArray[newX][newY].piece.color !== piece.color && chessBoardArray[newX][newY].piece.type !== "king") {
-                    tiles.push({ x: newX, y: newY })
-                  }
-                  break
-                }
-                newX += dx
-                newY += dy
-              }
-            }
-          }
-        }
-        
-      }
-    }
-    
-    return tiles;
+    return CardDefinitions.getPlayTiles(this.name, chessBoard, color);
   }
 
    createBuffers() {
