@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const http = require('http');
 const socketIo = require('socket.io');
 const PieceMovement = require('./public/shared/pieceMovement.js');
@@ -28,6 +29,13 @@ function validateMoveFormat(move) {
     return true;
 }
 
+app.use(compression());
+//Assets are large and change rarely; code is left on revalidation so deploys take effect immediately
+app.use('/Assets', express.static('public/Assets', {
+    maxAge: '7d',
+    //Models are plain text; the default mime guess for .obj stops gzip from applying
+    setHeaders: (res, filePath) => { if (/\.(obj|mtl)$/.test(filePath)) res.type('text/plain'); }
+}));
 app.use(express.static('public'));
 
 io.on('connection', (socket) => {

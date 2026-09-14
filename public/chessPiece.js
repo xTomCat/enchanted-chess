@@ -3,43 +3,21 @@ class ChessPiece {
     this.color = color
     this.type = type
     this.lastMove = null
+    this.texture = ChessPiece.sharedTexture(color)
+    ChessPiece.models = ChessPiece.models || {pawn: pawnModel, rook: rookModel, knight: knightModel,
+      bishop: bishopModel, queen: queenModel, king: kingModel}
+    this.model = ChessPiece.models[type]
+  }
 
-    //Define the resolution of the texture to be used
-    let resolution = 100
-    let sx, sy
-    //Determine the color of the texture
-    if (this.color === "black") {
-      this.texture = createGraphics(resolution, resolution)
-      //Cut out a random portion of the larger texture and set the texture attribute to that
-      sx = random(blackTexture.width - resolution);
-      sy = random(blackTexture.height - resolution);
-      this.texture.image(blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-    } else {
-      this.texture = createGraphics(resolution, resolution)
-      sx = random(whiteTexture.width - resolution);
-      sy = random(whiteTexture.height - resolution);
-      this.texture.image(whiteTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
+  static sharedTexture(color) {
+    ChessPiece.textures = ChessPiece.textures || {}
+    if (!ChessPiece.textures[color]) {
+      const res = 100, src = color === "black" ? blackTexture : whiteTexture
+      const graphic = createGraphics(res, res)
+      graphic.image(src, 0, 0, res, res, random(src.width - res), random(src.height - res), res, res)
+      ChessPiece.textures[color] = graphic
     }
-    switch (this.type) {
-      case "pawn":
-        this.model = pawnModel
-        break
-      case "rook":
-        this.model = rookModel
-        break
-      case "knight":
-        this.model = knightModel
-        break
-      case "bishop":
-        this.model = bishopModel
-        break
-      case "queen":
-        this.model = queenModel
-        break
-      case "king":
-        this.model = kingModel
-        break
-    }
+    return ChessPiece.textures[color]
   }
 
   drawModel() {

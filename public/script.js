@@ -74,13 +74,11 @@ function setup() {
   socket = io()
   createCanvas(windowWidth, windowHeight, WEBGL)
   canvas2d = createGraphics(windowWidth, windowHeight)
-  console.log(_renderer)
   cam = createCamera()
   guiRenderer = new GuiRenderer(windowWidth, windowHeight, cam)
   chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture).populateBoard()
   cardDataManager = new CardDataManager()
   rectMode(CENTER)
-  console.log(cam)
   gl = this._renderer.GL;
   gl.enable(gl.CULL_FACE);
   gl.cullFace(gl.FRONT)
@@ -156,8 +154,6 @@ function setup() {
 
   socket.on('gameData', (gameDataReceived) => { 
     gameData = gameDataReceived
-    console.log("gameData: ")
-    console.log(gameData)
     if (guiRenderer) {
       let opponentNamePlate = guiRenderer.ingameGuiElements.opponentNamePlate
       let roomCodeText = guiRenderer.ingameGuiElements.gameTime
@@ -200,14 +196,12 @@ function setup() {
   }
     compareBoard(chessBoard, gameDataReceived.board)
     if (chessBoard && gameDataReceived.lastMove) {
-      console.log(gameDataReceived.lastMove)
       let piece = chessBoard.getTileData(gameDataReceived.lastMove.to.x, gameDataReceived.lastMove.to.y).piece;
        if (piece) {
         piece.lastMove = gameDataReceived.lastMove;
         
       }
     }
-    console.log(chessBoard.getBoard())
     check = gameData.check
   })
 
@@ -439,7 +433,6 @@ if (guiRenderer) {
 
 function mouseReleased() {
   mousePressedInBoard = false
-  console.log("distance: " + dist(mouseX, mouseY, mouseClickedLoc.x, mouseClickedLoc.y))
 }
 
 function mouseMoved() {

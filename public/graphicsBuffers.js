@@ -282,26 +282,13 @@ class Button {
     setShadow(boolean) {
         if (boolean) {
             let shadow = createGraphics(this.width, this.height);
-            shadow.loadPixels();
-            this.gBuffer.loadPixels();
-            let c = 0;
-            for (let x = 0; x < this.width; x++) {
-                for (let y = 0; y < this.height; y++) {
-                    let index = (x + y * this.width) * 4;
-                    let alpha = this.gBuffer.pixels[index + 3];
-                    if (alpha > 0) {
-                        shadow.pixels[index] = 0;     // Red
-                        shadow.pixels[index + 1] = 0; // Green
-                        shadow.pixels[index + 2] = 0; // Blue
-                        shadow.pixels[index + 3] = this.gBuffer.pixels[index + 3]; // Alpha
-                        
-                        c++;
-                    }
-                }
-            }
-            shadow.updatePixels();
+            shadow.image(this.gBuffer, 0, 0);
+            const ctx = shadow.drawingContext;
+            ctx.globalCompositeOperation = "source-in";
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, shadow.width, shadow.height);
+            ctx.globalCompositeOperation = "source-over";
             this.shadow = shadow;
-
         } else {
             this.shadow = null;
         }

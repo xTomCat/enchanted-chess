@@ -209,13 +209,8 @@ class CardObject {
   }
 
    createBuffers() {
-      let graphics = createGraphics(this.image.width, this.image.height); //Create a graphics object.
-      graphics.image(this.image, 0, 0, this.image.width, this.image.height); //Draw the card image to the graphics object.
-
-      
-
-      let toolTipBuffer = new ImageButton(graphics.width, graphics.height, 50, windowHeight *0.2)
-        .setImage(graphics)
+      let toolTipBuffer = new ImageButton(this.image.width, this.image.height, 50, windowHeight *0.2)
+        .setImage(this.image)
         .setScale(1)
         .setFadeIn(true)
         .setHoverEffect(20, 0, 0.5)
@@ -235,8 +230,8 @@ class CardObject {
       toolTipBuffer.setScale(0.5)
       toolTipBuffer.updateGraphics()
       
-      let imageButton = new ImageButton(graphics.width, graphics.height, 0, 0) //Create a new image button object to handle drawing + effects
-        .setImage(graphics)
+      let imageButton = new ImageButton(this.image.width, this.image.height, 0, 0) //Create a new image button object to handle drawing + effects
+        .setImage(this.image)
         .setBounceEffect(0, 10, 0.05, this.index)
         .setHoverEffect(0, -20, 0.5)
         .anchorToBottom(true)

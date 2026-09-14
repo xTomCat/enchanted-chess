@@ -1,4 +1,5 @@
 const FLASH_SECONDS = 0.45
+const PICK_MAT = mat4.create(), PICK_NEAR = vec3.create(), PICK_FAR = vec3.create(), PICK_DIR = vec3.create()
 
 class Chessboard {
   constructor(width, height, tileSize, whiteTexture, blackTexture) {
@@ -10,33 +11,18 @@ class Chessboard {
     this.chessBoard = []
     this.rotAngle = 0
 
-    this.textures = [];
-
-    //Loop through the board height
+    // atlas of random marble sections
+    const cell = tileSize * 5
+    this.atlas = createGraphics(this.width * cell, this.height * cell)
     for (let i = 0; i < this.height; i++) {
       this.chessBoard.push([]);
-      //Loop through the board width
       for (let j = 0; j < this.width; j++) {
-        //If the sum of the current x and y is even, the tile is black
-        if ((i + j) % 2 === 0) {
-          this.chessBoard[i].push({type: "black"});
-        } else {
-          this.chessBoard[i].push({type: "white"});
-        }
-        //Create a graphic for each tile
-        let resolution = tileSize * 5
-        let tileGraphic = createGraphics(resolution, resolution);
-        let sx, sy;
-        if (this.chessBoard[i][j].type == "white") {
-          sx = random(this.whiteTexture.width - resolution);
-          sy = random(this.whiteTexture.height - resolution);
-          tileGraphic.image(this.whiteTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-        } else if (this.chessBoard[i][j].type == "black"){
-          sx = random(this.blackTexture.width - resolution);
-          sy = random(this.blackTexture.height - resolution);
-          tileGraphic.image(this.blackTexture, 0, 0, resolution, resolution, sx, sy, resolution, resolution);
-        }
-        this.textures.push(tileGraphic);
+        this.chessBoard[i].push({type: (i + j) % 2 === 0 ? "black" : "white"});
+        const src = this.chessBoard[i][j].type == "white" ? this.whiteTexture : this.blackTexture
+        this.atlas.image(src, j * cell, i * cell, cell, cell,
+          random(src.width - cell), random(src.height - cell), cell, cell)
+        this.atlas.noFill(); this.atlas.stroke(0); this.atlas.strokeWeight(3)
+        this.atlas.rect(j * cell, i * cell, cell, cell)
       }
     }
 
@@ -51,10 +37,43 @@ class Chessboard {
       }
     }
 
+    this.geometry = this.buildGeometry(cell)
   }
 
-  getTileTexture(i, j) {
-    return this.textures[i * this.width + j];
+  // Tiles get baked into a static mesh
+  buildGeometry(cell) {
+    const s = this.tileSize, geom = new p5.Geometry()
+    geom.gid = "chessboard"
+    const quad = (m, w, h, i, j) => {
+      const n = geom.vertices.length, e = 0.5 / cell
+      const u0 = (j + e) / this.width, u1 = (j + 1 - e) / this.width
+      const v0 = (i + e) / this.height, v1 = (i + 1 - e) / this.height
+      const corners = [[-w / 2, -h / 2, u0, v0], [w / 2, -h / 2, u1, v0], [w / 2, h / 2, u1, v1], [-w / 2, h / 2, u0, v1]]
+      for (const c of corners) {
+        geom.vertices.push(m.multiplyPoint(new p5.Vector(c[0], c[1], 0)))
+        geom.uvs.push(c[2], c[3])
+      }
+      geom.faces.push([n, n + 1, n + 2], [n, n + 2, n + 3])
+    }
+    for (let i = 0; i < this.width; i++) {
+      for (let j = 0; j < this.height; j++) {
+        const t = this.chessBoard[i][j]
+        const m = new p5.Matrix()
+        m.translate([t.x, t.y, t.z]); m.rotateX(PI / 2); m.rotateZ(PI / 2)
+        quad(m, s, s, i, j)
+        m.translate([0, 0, -s / 2]); m.rotateX(PI)
+        quad(m, s, s, i, j)
+        const side = (dx, dy, rx, ry) => {
+          const k = m.copy(); k.translate([dx, dy, -s / 4]); k.rotateX(rx); k.rotateY(ry)
+          quad(k, s, s / 2, i, j)
+        }
+        if (i == 0) side(-s / 2, 0, PI / 2, PI * 1.5)
+        else if (i == this.width - 1) side(s / 2, 0, PI * 1.5, PI / 2)
+        if (j == 0) side(0, -s / 2, PI * 1.5, PI)
+        else if (j == this.height - 1) side(0, s / 2, PI * 1.5, PI * 2)
+      }
+    }
+    return geom.computeNormals()
   }
   getBoard() {
     return this.chessBoard
@@ -172,34 +191,27 @@ class Chessboard {
   }
 
   getSelectedTile(mouseX, mouseY) {
-    let chessBoard = this.chessBoard;
-    let width = _renderer.width;
-    let height = _renderer.height;
-    // convert mouse coordinates to NDC
-    let xNDC = (2 * mouseX) / width - 1;
-    let yNDC = 1 - (2 * mouseY) / height;
+    let xNDC = (2 * mouseX) / _renderer.width - 1;
+    let yNDC = 1 - (2 * mouseY) / _renderer.height;
+    mat4.multiply(PICK_MAT, _renderer.uPMatrix.mat4, _renderer.uMVMatrix.mat4);
+    mat4.invert(PICK_MAT, PICK_MAT);
+    vec3.transformMat4(PICK_NEAR, [xNDC, yNDC, -1], PICK_MAT);
+    vec3.transformMat4(PICK_FAR, [xNDC, yNDC, 1], PICK_MAT);
+    vec3.subtract(PICK_DIR, PICK_FAR, PICK_NEAR);
+    let t = -PICK_NEAR[1] / PICK_DIR[1];
+    if (!(t >= 0)) return null;
+    return worldToBoardIndices(PICK_NEAR[0] + PICK_DIR[0] * t, PICK_NEAR[2] + PICK_DIR[2] * t, this);
+  }
 
-    let projMatrix = _renderer.uPMatrix.mat4;
-    let viewMatrix = _renderer.uMVMatrix.mat4;
-    // combined transformation matrix (from projection and modelView matrices)
-    let combinedMatrix = mat4.create();
-    mat4.multiply(combinedMatrix, projMatrix, viewMatrix);
-    // invert the combined matrix
-    let invCombinedMatrix = mat4.create();
-    mat4.invert(invCombinedMatrix, combinedMatrix);
-    // transform the NDC coordinates to world coordinates for the near and far points
-    let nearPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, -1], invCombinedMatrix);
-    let farPoint = vec3.transformMat4(vec3.create(), [xNDC, yNDC, 1], invCombinedMatrix);
-    // Normalize the ray direction
-    let rayDir = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), farPoint, nearPoint));
-    for (let x = 0; x < this.width; x++) {
-      for (let y = 0; y < this.height; y++) {
-        if (this.rayIntersectsTile(nearPoint, rayDir, x, y)) {
-          return worldToBoardIndices(chessBoard[x][y].x, chessBoard[x][y].z, this);
-        }
-      }
+  tileHighlight(tile) {
+    if (tile.flash > totalTime) {
+      const fade = (tile.flash - totalTime) / FLASH_SECONDS, c = tile.flashColor
+      return [c[0] * fade, c[1] * fade, c[2] * fade]
     }
-    return null;
+    if (tile.hovered) return [255, 255, 255]
+    if (tile.selected) return [0, 255, 0]
+    if (tile.available) return [255, 95, 31]
+    return null
   }
 
   rayIntersectsTile(nearPoint, rayDir, x, y) {
@@ -249,98 +261,33 @@ class Chessboard {
       }
     }
     gl.cullFace(gl.FRONT)
+    noStroke()
     let chessBoard = this.chessBoard;
     let tileSize = this.tileSize;
-    let boardHeight = this.height;
-    let boardWidth = this.width;
+    texture(this.atlas)
+    model(this.geometry)
     //Get the hovered tile
     let hoveredTile = this.getSelectedTile(mouseX, mouseY)
-    for (let i = 0; i < boardWidth; i++) {
-      for (let j = 0; j < boardHeight; j++) {
+    for (let i = 0; i < this.width; i++) {
+      for (let j = 0; j < this.height; j++) {
+        let tile = chessBoard[i][j];
+        tile.hovered = !!hoveredTile && i == hoveredTile.x && j == hoveredTile.y;
+        let highlight = this.tileHighlight(tile);
+        if (!tile.piece && !highlight) continue;
         push();
-        //If the hovered tile isn't null, set that tile to be hovered with JSON data.
-        if (hoveredTile) {
-        if (i == hoveredTile.x && j == hoveredTile.y) {
-            chessBoard[i][j].hovered = true;
-        } else {chessBoard[i][j].hovered = false}
-        } else {chessBoard[i][j].hovered = false}
-        translate(chessBoard[i][j].x, chessBoard[i][j].y, chessBoard[i][j].z);
+        translate(tile.x, tile.y, tile.z);
         rotateX(PI/2)
-        rotateZ(PI/2)
-        let tileTexture = this.getTileTexture(i, j);
-        if (chessBoard[i][j].piece) {
-          chessBoard[i][j].piece.drawModel()
-        }
-        //Render the tiles differently if they're selected
-        if (chessBoard[i][j].selected == true) {
-          emissiveMaterial(0, 255, 0)
-          fill(0,255,0)
-          //noStroke()
-        }
-        //Render the tiles differently if they're available
-        else if (chessBoard[i][j].available == true) {
-          fill(255, 95, 31)
-          emissiveMaterial(255, 95, 31)
-
-          //noStroke()
-        } 
-        else {
-          stroke(0,0,0)
-          texture(tileTexture);
-        }
-        if (chessBoard[i][j].hovered == true) {
-          emissiveMaterial(255, 255, 255)
-          //fill(255,0,0)
-          //noStroke()
-        } 
-
-        if (chessBoard[i][j].flash > totalTime) {
-          let fade = (chessBoard[i][j].flash - totalTime) / FLASH_SECONDS
-          let c = chessBoard[i][j].flashColor
-          emissiveMaterial(c[0] * fade, c[1] * fade, c[2] * fade)
-        }
-
-        //Draw the top plane
-        square(0, 0, tileSize)
-
-        //Draw the bottom plane
-        translate(0, 0, -tileSize/2);
-        rotateX(PI)
-        square(0, 0, tileSize)
-
-        //Draw the sides for the top of the chessboard
-        if (i == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
+        if (tile.piece) {
           push()
-          translate(-tileSize/2, 0, -tileSize/4)
-          rotateX(PI/2)
-          rotateY(PI*1.5)
-          rect(0,0, tileSize, tileSize/2)
-          pop()
-        //Draw the sides for the bottom of the chessboard
-        } else if (i == boardWidth-1 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
-          push()
-          translate(tileSize/2, 0, -tileSize/4)
-          rotateX(PI*1.5)
-          rotateY(PI/2)
-          rect(0,0, tileSize, tileSize/2)
+          rotateZ(PI/2)
+          tile.piece.drawModel()
           pop()
         }
-        //Draw the sides for the left side of the chessboard
-        if (j == 0 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
-          push()
-          translate(0, -tileSize/2, -tileSize/4)
-          rotateX(PI*1.5)
-          rotateY(PI)
-          rect(0,0, tileSize, tileSize/2)
-          pop()
-          //Draw the sides for the right side of the chessboard
-        } else if (j == boardHeight-1 && (chessBoard[i][j].type == "black" || chessBoard[i][j].type == "white")) {
-          push()
-          translate(0, tileSize/2, -tileSize/4)
-          rotateX(PI*1.5)
-          rotateY(PI*2)
-          rect(0,0, tileSize, tileSize/2)
-          pop()
+        if (highlight) {
+          fill(highlight[0], highlight[1], highlight[2]) //also clears the atlas texture binding
+          emissiveMaterial(highlight[0], highlight[1], highlight[2])
+          translate(0, 0, 0.25)
+          square(0, 0, tileSize)
         }
         pop();
       }
@@ -357,8 +304,6 @@ class Chessboard {
     if (gameData == null) {
       return;
     }
-
-    console.log(gameData)
 
     if (gameData.state != "started") {
       return;
@@ -378,7 +323,6 @@ class Chessboard {
                 from: { x: i, y: j },
                 to: { x: x, y: y }
               };
-              console.log(move)
               this.move(move);
               socket.emit('move', move);
               pieceMoved = true;
