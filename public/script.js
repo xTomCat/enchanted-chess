@@ -63,25 +63,10 @@ function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL)
   canvas2d = createGraphics(windowWidth, windowHeight)
   console.log(_renderer)
-  //let joinRoomButton = createButton('Join a room')
-  //let nickNameButton = createButton('Choose your nickname')
-  //let createARoomButton = createButton('Create a room')
   cam = createCamera()
   guiRenderer = new GuiRenderer(windowWidth, windowHeight, cam)
-  //nickNameButton.position(8, windowHeight-48)
-  //nickNameButton.mousePressed(promptNickName)
-  //joinRoomButton.position(8, windowHeight-28)
-  //joinRoomButton.mousePressed(joinGameByRoomCode)
-  //createARoomButton.position(8, windowHeight-68)
-  //createARoomButton.mousePressed(createRoom)
   chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture).populateBoard()
   cardDataManager = new CardDataManager()
-  //cardDataManager.addCardToDeck("Placeholder")
-  //cardDataManager.addCardToDeck("Placeholder")
-  //cardDataManager.addCardToDeck("Placeholder")
-  //cardDataManager.addCardToDeck("Placeholder")
-  //chessBoard.populateBoard()
-  //chessBoardArray = chessBoard.getBoard()
   rectMode(CENTER)
   console.log(cam)
   gl = this._renderer.GL;
@@ -135,10 +120,6 @@ function setup() {
 
   socket.on('roomCreated', (roomCode) => {
     room = roomCode
-    //let roomCloseButton = createButton('Close room')
-    //roomCloseButton.position(8, windowHeight-88)
-    //roomCloseButton.mousePressed(closeRoom)
-    //socket.emit('updateDeck', cardDataManager.playerDeck)
     if (guiRenderer) {
       guiRenderer.setScreen("game")
     }
@@ -188,12 +169,6 @@ function setup() {
       if (roomCodeText.getText() !== roomCodeAsString) {
         roomCodeText.updateText(roomCodeAsString)
       }
-      //if (gameData.fakePieces.length > 0) {
-      //  for (let piece of gameData.fakePieces) {
-      //    chessBoard.setTileData(piece.x, piece.y, {piece: new ChessPiece(piece.type, piece.color)})
-      //  }
-//
-      //}
       if (player.energy !== guiRenderer.ingameGuiElements.playerEnergyBar.energy) {
         guiRenderer.ingameGuiElements.playerEnergyBar.update(player.energy)
       }
@@ -226,7 +201,6 @@ function setup() {
     console.log(chessBoard.getBoard())
     check = gameData.check
   })
-
 
 
   socket.on('initBoard', (board) => {
@@ -342,22 +316,6 @@ function draw() {
   if (frameCount % targetFrameRate == 0) {
     fps = round(frameRate())
   }
-  //push()
-  //noStroke()
-  //// Pass time uniform
-  //skyShader.setUniform('u_time', millis() / 1000.0);
-//
-  //// Extract projection and model-view matrices as Float32Array
-  //let pMatrix = this._renderer.uPMatrix.mat4;
-  //let mvMatrix = this._renderer.uMVMatrix.mat4;
-//
-  //// Pass them as uniforms to the shader
-  //skyShader.setUniform('projectionMatrix', pMatrix);
-  //skyShader.setUniform('modelViewMatrix', mvMatrix);
-  //shader(skyShader)  // Draw a rotating box to test the shader
-  //rotateY(frameCount * 0.01);
-  //box(2000);
-  //pop()
   cam.lookAt(0,0,0)
   ambientLight(128, 128, 128);
   directionalLight(128, 128, 128, 0, 1, 0);
@@ -439,13 +397,6 @@ function keyPressed() {
     
   }
 
-  //if (guiRenderer) {
-  //  if (guiRenderer.ingameGuiElements.chatInput.focused) {
-  //    let chatInput = guiRenderer.ingameGuiElements.chatInput
-  //    chatInput.typeCharacter(key)
-//
-  //  }
-  //}
 
 }
 
@@ -466,44 +417,15 @@ if (guiRenderer) {
     for (let card of cardDataManager.playerDeck) {
       card.iconBuffer.handleClick(mouseClickedLoc.x, mouseClickedLoc.y, guiRenderer.guiScale)
     }
-    //let card = cardDataManager.getSelectedCard()
-    //console.log("Gui scale: " + guiRenderer.guiScale)
-    //console.log("mouseX: " + mouseClickedLoc.x + " mouseY: " + mouseClickedLoc.y)
-    //if (card) {
-    //  let targX = mouseClickedLoc.x/(guiRenderer.guiScale)// - card.iconBuffer.gBuffer.width/2// * guiRenderer.guiScale; // Distance from left of the screen
-    //  let targY = mouseClickedLoc.y/(guiRenderer.guiScale)// - card.iconBuffer.gBuffer.height/4// * guiRenderer.guiScale;
-    //  //if (card.iconBuffer.align == RIGHT) {
-    //  //    targX = windowWidth + targX
-    //  //} else if (card.iconBuffer.align == CENTER) {
-    //  //    targX = ((windowWidth+15)/2)
-    //  //    canvas.imageMode(CENTER)
-    //  //}
-    //  if (card.iconBuffer.anchorBottom) {
-    //    //buttonY = windowHeight - (this.gBuffer.height - this.y) * guiScale
-    //    targY = (targY - ((guiRenderer.height/2)) - ((card.iconBuffer.gBuffer.height/guiRenderer.guiScale)/2))
-    //    //targY = targY - (card.iconBuffer.gBuffer.height - mouseClickedLoc.y) * guiRenderer.guiScale
-    //    //targY = windowHeight - (card.iconBuffer.gBuffer.height - card.iconBuffer.y) * guiRenderer.guiScale
-    //      
-    //
-    //  }
-    //  card.iconBuffer.animateTo(targX, targY, 100)
-   // }
   }
 }
 
 }
 
 
-
 function mouseReleased() {
   mousePressedInBoard = false
   console.log("distance: " + dist(mouseX, mouseY, mouseClickedLoc.x, mouseClickedLoc.y))
-  //if (dist(mouseX, mouseY, mouseClickedLoc.x, mouseClickedLoc.y) < 5) {
-  //  for (let card of cardDataManager.playerDeck) {
-  //    card.iconBuffer.setSelected(false)
-  //  
-  //  }
-  //}
 }
 
 function mouseMoved() {

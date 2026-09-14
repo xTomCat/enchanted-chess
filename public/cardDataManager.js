@@ -160,11 +160,6 @@ class CardDataManager {
               // Add logic to handle the effect of the Fireball card on the target
               break;
             }
-        //if (gameData.state != "started") {
-        //  console.error("Game hasn't started yet!")
-        //  return;
-        //}
-        // Uncomment once complete
       }
       socket.emit('playCard', cardIndex, x, y);
 

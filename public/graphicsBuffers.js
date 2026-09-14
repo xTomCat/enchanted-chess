@@ -311,7 +311,6 @@ class Button {
     }
 
 
-
     handleHover(mouseIsHovered, guiScale) {
         const maxOffsetX = this.maxOffsetX * guiScale;
         const maxOffsetY = this.maxOffsetY * guiScale;
@@ -441,7 +440,6 @@ class Button {
         }
 
 
-
         let buttonX = this.x * guiScale; // Distance from left of the screen
         let buttonY = this.y * guiScale;
         if (this.align == RIGHT) {
@@ -536,16 +534,10 @@ class Button {
             canvas.ellipse(buttonMinWidth, buttonMinHeight, 10, 10)
             canvas.rect(buttonMinWidth , buttonMinHeight, buttonMinWidth + buttonWidth, buttonMinHeight + buttonHeight);
             canvas.ellipse(buttonMinWidth + buttonWidth, buttonMinHeight + buttonHeight, 10, 10)
-            //for (let component of this.components) {
-            //    canvas.push()
-            //    canvas.rect(component.x + buttonX, component.y + buttonY, component.x + buttonX + component.getWidth(), component.y + buttonY + component.getHeight())
-            //    canvas.pop()
-            //}
             pop()
         }
 
         
-
 
 
         // Text Display for Menu Buttons
@@ -746,9 +738,6 @@ class TextButton extends Button {
         this.gBuffer.textFont(plunge);
         this.gBuffer.textSize(this.size);
         this.gBuffer.textAlign(LEFT);
-        //const tempCanvas = document.createElement('canvas');
-        //const tempContext = tempCanvas.getContext('2d');
-        //tempContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
         canvas2d.drawingContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
         const textWidth = canvas2d.drawingContext.measureText(this.text).width + 20; // Measure the actual text width, with an offset for the shadow
         const textHeight = this.size * 1.2; // Height is directly based on the size
@@ -915,9 +904,6 @@ class OpponentNamePlate extends Button {
         } else {
             this.gBuffer = createGraphics(this.width, this.height)
         }
-        //this.gBuffer.noStroke()
-        //this.gBuffer.fill(255)
-        //this.gBuffer.rect(0, 0, this.width, this.height)
         this.gBuffer.fill(255, 49, 40)
         this.gBuffer.rect(this.width*0.20, 0, this.width*0.8, this.height*0.5)
         this.gBuffer.push()
@@ -1007,9 +993,6 @@ class PlayerEnergyBar extends Button {
         } else {
             this.gBuffer = createGraphics(this.width, this.height)
         }
-        //this.gBuffer.noStroke()
-        //this.gBuffer.fill(255)
-        //this.gBuffer.rect(0, 0, this.width, this.height)
         this.gBuffer.translate(5, 5)
         this.gBuffer.image(circleShadow, 0, 0, this.height-5, this.height-5)
         this.gBuffer.image(circle, -5, -5, this.height-5, this.height-5) //Can do this because equal length sides
@@ -1127,12 +1110,6 @@ class ChatInput extends Button {
         }
         this.gBuffer.noFill()
         this.gBuffer.rect(0, 0, this.width, this.height)
-        //this.gBuffer.push()
-        //this.gBuffer.translate(25, 10)
-        //this.gBuffer.scale(0.25)
-        //this.gBuffer.image(personIconShadow, 15, 15, personIcon.width, personIcon.height)
-        //this.gBuffer.image(personIcon, 0, 0, personIcon.width, personIcon.height)
-        //this.gBuffer.pop()
         this.gBuffer.translate(9, -5)
         this.gBuffer.scale(0.9)
         this.gBuffer.push()
@@ -1147,15 +1124,6 @@ class ChatInput extends Button {
     openChatBox() {
         this.focused = true
         this.updateText(this.textHeld)
-        //let blink = true;
-        //setInterval(() => {
-        //    if (blink) {
-        //        this.updateText("_");
-        //    } else {
-        //        this.updateText("");
-        //    }
-        //    blink = !blink;
-        //}, 500); // Adjust the interval time as needed
         return this;
     }
 

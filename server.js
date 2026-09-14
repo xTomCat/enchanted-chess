@@ -115,6 +115,7 @@ io.on('connection', (socket) => {
           player.removeCardFromDeck(index)
           console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y)
           io.to('game-' + game.roomCode).emit('receivePlayCard', player.color, index, x, y, card)
+          game.evaluateGameState()
         } else {
           player.energy += card.cost
           socket.emit('error', 'Invalid card target')
@@ -273,10 +274,6 @@ function sendGameDataToRoom(roomCode) {
     const players = game.getPlayers();
     whiteDeck = []
     blackDeck = []
-    //fakePieces = []
-    //if (game.fakePieceQueue.length > 0) {
-    //  fakePieces = game.fakePieceQueue
-    //}
     if (players[0]) {
       whiteDeck = players[0].deck
     } 
@@ -291,6 +288,7 @@ function sendGameDataToRoom(roomCode) {
         lastMove: game.lastMove,
         lastMovedPiece: game.lastMovedPiece,
         check: game.check,
+        result: game.result,
         roomCode: roomCode,
         decks: {
           white: whiteDeck,
@@ -365,6 +363,7 @@ class Game {
     this.height = 8;
     this.turn = "white";
     this.check = null
+    this.result = null
     this.lastMove = null
     this.fakePieceQueue = []
     this.lastMovedPiece
@@ -486,30 +485,9 @@ class Game {
         this.awardCaptureEnergy(this.turn, capturedPiece);
       }
 
-      if (this.isInCheck("black")) {
-        this.check = "black"
-        if (this.isCheckMate("black")) {
-          this.checkMate = "black"
-          this.state = "checkmate"
-          sendGameDataToRoom(this.roomCode)
-          console.log("Checkmate!")
-          this.close()
-        }
-      } else if (this.isInCheck("white")) {
-        this.check = "white"
-        if (this.isCheckMate("white")) {
-          this.checkMate = "white"
-          this.state = "checkmate"
-          sendGameDataToRoom(this.roomCode)
-          console.log("Checkmate!")
-          this.close()
-        }
-      } else {
-        this.check = null
-      }
-
-      // Switch turns
       this.turn = this.turn === "white" ? "black" : "white";
+
+      this.evaluateGameState();
 
       return { success: true };
     }
@@ -558,69 +536,12 @@ class Game {
         )
       }
 
-      //close() {{
-      //  const player1 = this.players[0];
-      //  const player2 = this.players[1];
-      //  const roomCode = this.roomCode;
-      //  if (player1 instanceof Player) {
-      //    player1.setColor("unset!")
-      //  }
-      //  if (player2 instanceof Player) {
-      //    player2.setColor("unset!")
-      //  }
-      //  
-      //  //io.to('game-' + roomCode).emit('roomClosed');
-      //  if (player1 instanceof Player) {
-      //    player1.leaveRoom(player1, roomCode);
-      //  }
-      //  if (player2 instanceof Player) {
-      //    player2.leaveRoom(player2, roomCode);
-      //  }
-      //  delete this;
-      //};
-      //}
 
-    //  isInCheck(color) {
-    //    let kingPos = this.findKing(color);
-    //    let king = this.getTileData(kingPos.x, kingPos.y).piece;
-    //    //loop through the board
-    //    for (let i = 0; i < this.height; i++) {
-    //      for (let j = 0; j < this.width; j++) {
-    //        //get the piece at loop location
-    //        let piece = this.getTileData(j, i).piece;
-    //        //if the piece exists and is not the same color as the king
-    //        if (piece && piece.color != color) {
-    //
-    //          let moves = piece.getAvailableMoves(this, j, i);
-    //          if (moves) {
-    //          for (let i = 0; i < moves.length; i++) {
-    //            if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
-    //              return true;
-    //            }
-    //          }
-    //        }
-    //        }
-    //      }
-    //    }
-    //    return false;
-    //
-    //}
-//
-    //isCheckMate(color) {
-    //  let kingPos = this.findKing(color);
-    //  let king = this.getTileData(kingPos.x, kingPos.y).piece;
-    //  let moves = king.getAvailableMoves(this, kingPos.x, kingPos.y);
-    //  let isInCheck = this.isInCheck(color);
-    //  if (moves.length == 0 && isInCheck) {
-    //    return true;
-    //  }
-    //  else {
-    //    return false;
-    //  }
-    //}
     isInCheck(color) {
       let kingPos = this.findKing(color);
-      let king = this.getTileData(kingPos.x, kingPos.y).piece;
+      if (!kingPos) {
+        return false;
+      }
       for (let i = 0; i < this.height; i++) {
       for (let j = 0; j < this.width; j++) {
         let piece = this.getTileData(j, i).piece;
@@ -637,32 +558,74 @@ class Game {
       return false;
     }
 
-    isCheckMate(color) {
-      if (!this.isInCheck(color)) {
-      return false;
-      }
+    hasLegalMoves(color) {
       for (let i = 0; i < this.height; i++) {
-      for (let j = 0; j < this.width; j++) {
-        let piece = this.getTileData(j, i).piece;
-        if (piece && piece.color === color) {
-        let moves = piece.getAvailableMoves(this, j, i);
-        for (let move of moves) {
-          let originalPiece = this.getTileData(move.x, move.y).piece;
-          this.setTileData(move.x, move.y, { piece: piece });
-          this.setTileData(j, i, { piece: null });
-          let inCheck = this.isInCheck(color);
-          this.setTileData(move.x, move.y, { piece: originalPiece });
-          this.setTileData(j, i, { piece: piece });
-          if (!inCheck) {
-          return false;
+        for (let j = 0; j < this.width; j++) {
+          let piece = this.getTileData(j, i).piece;
+          if (piece && piece.color === color) {
+            let moves = piece.getAvailableMoves(this, j, i);
+            for (let move of moves) {
+              let originalPiece = this.getTileData(move.x, move.y).piece;
+              this.setTileData(move.x, move.y, { piece: piece });
+              this.setTileData(j, i, { piece: null });
+              let inCheck = this.isInCheck(color);
+              this.setTileData(move.x, move.y, { piece: originalPiece });
+              this.setTileData(j, i, { piece: piece });
+              if (!inCheck) {
+                return true;
+              }
+            }
           }
         }
+      }
+      return false;
+    }
+
+    isCheckMate(color) {
+      return this.isInCheck(color) && !this.hasLegalMoves(color);
+    }
+
+    isStaleMate(color) {
+      return !this.isInCheck(color) && !this.hasLegalMoves(color);
+    }
+
+    opposingColor(color) {
+      return color === "white" ? "black" : "white";
+    }
+
+    evaluateGameState() {
+      if (this.result) {
+        return;
+      }
+
+      for (const color of ["white", "black"]) {
+        if (!this.findKing(color)) {
+          this.finishGame({ type: "king_captured", winner: this.opposingColor(color), loser: color });
+          return;
         }
       }
+
+      this.check = this.isInCheck(this.turn) ? this.turn : null;
+
+      if (this.hasLegalMoves(this.turn)) {
+        return;
       }
-      return true;
+
+      if (this.check) {
+        this.finishGame({ type: "checkmate", winner: this.opposingColor(this.turn), loser: this.turn });
+      } else {
+        this.finishGame({ type: "stalemate", winner: null, loser: null });
+      }
     }
-    
+
+    finishGame(result) {
+      this.result = result;
+      this.state = "finished";
+      console.log("Game " + this.roomCode + " finished: " + result.type + (result.winner ? " (" + result.winner + " wins)" : " (draw)"));
+      sendGameDataToRoom(this.roomCode);
+      this.close();
+    }
+
     findKing(color) {
       for (let i = 0; i < this.height; i++) {
         for (let j = 0; j < this.width; j++) {
@@ -867,8 +830,6 @@ class CardDataManager {
   cardExists(name) {
     return this.cardData.find(card => card.name === name);
   }
-
-
 
 
 }

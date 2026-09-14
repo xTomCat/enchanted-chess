@@ -11,7 +11,6 @@ class GuiRenderer {
       const baseWidth = 1920;
       const baseHeight = 1080;
       this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
-      //this.debugBuffer = new TextButton(50, 50, 50, 50, "[DEBUG] FPS: " + fps, 50, LEFT)
       this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options", "nickname"];
       this.ingameGuiElementNames = ["hamburgerMenu", "gameTime",
         "opponentNamePlate", "playerNamePlate", "playerEnergyBar", "statusText"]// "opponentEnergy", 
@@ -161,81 +160,18 @@ class GuiRenderer {
         .setAlign(LEFT)
         .anchorToBottom(true)
 
-      //this.ingameGuiElements.cardDeck = new CardDeck(600, 155, 50, 50)
-      //  .setAlign(CENTER)
-      //  .anchorToBottom(true)
-      //  .addCard()
 
-      // this.ingameGuiElements.card1 = new Card(100, 150, 50, 50)
-      //   .setAlign(LEFT)
-      //   .anchorToBottom(true)
-      //   .setCard("backofcard")
-      //   .updateGraphics()
-
-
-      // this.ingameGuiElements.card2 = new Card(100, 150, 100, 50)
-      //   .setAlign(LEFT)
-      //   .anchorToBottom(true)
-      //   .setCard("backofcard")
-      //   .updateGraphics()
       
-      // this.ingameGuiElements.card3 = new Card(100, 150, 50, 50)
-      //   .setAlign(LEFT)
-      //   .anchorToBottom(true)
 
-
-
-      //this.ingameGuiElements.chatInput = new ChatInput(500, 50, -550, -50)
-      //  .setAlign(RIGHT)
-      //  .anchorToBottom(true)
 
       //this.ingameGuiElements.chatInput.onClick(this.ingameGuiElements.chatInput.openChatBox)
         
-      //this.ingameGuiElements.opponentNamePlate = new TextButton(200, 60, -50, 50)
-      //  .setText("Waiting...")
-      //  .setAlign(RIGHT)
-      //  .setTextSize(50)
-      //  .setBackPlate(255, 49, 40)
-      //  .updateGraphics()
-//
-      //let personIcon = new ImageButton(graphic.width, graphic.height, this.ingameGuiElements.opponentNamePlate.getTextWidth(), 10)
-      //    .setImage(graphic)
-      //    .setScale(0.19)
-      //    .updateGraphics()
-      //    .setShadow(true)
 
       
 
-      //let namePlateBoxGraphic = createGraphics(this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("width")+10, this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("height"))
-      ////namePlateBoxGraphic.background(255, 49, 49)
-      //namePlateBoxGraphic.fill(255, 49, 40)
-      //namePlateBoxGraphic.rect(0, 0, namePlateBoxGraphic.width, namePlateBoxGraphic.height, 0,0,0,0)
-//
-      //let namePlateBoxObject = new ImageButton(this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("width")+10, this.ingameGuiElements.opponentNamePlate.getDimensionsWithComponents("height")+5, -10, -5)
-      //  .setPlate(255, 49, 40)
-      //  .updateGraphics()
-////
-      ////namePlateBoxGraphic.fill(0)
-      ////namePlateBoxGraphic.rect(0, 0, namePlateBoxGraphic.width, namePlateBoxGraphic.height, 0,0,0,0)
-////
-      //let namePlateBoxShadow = new ImageButton(namePlateBoxObject.gBuffer.width, namePlateBoxObject.gBuffer.height, -5, 5)
-      //  .setPlate(0,0,0)
-      //  .updateGraphics()
-//
-      //this.ingameGuiElements.opponentNamePlate.addComponent(namePlateBoxShadow)
-      //this.ingameGuiElements.opponentNamePlate.addComponent(namePlateBoxObject)
-      //this.ingameGuiElements.opponentNamePlate.addComponent(personIcon)
-      //
-      //this.ingameGuiElements.opponentNamePlate.updateGraphics()
-      //this.ingameGuiElements.opponentNamePlate.addComponent(this.menuButtons.personIcon)
 
       
 
-      //this.ingameGuiElements.opponentnamePlateBox = new TextButton(namePlateGBuffer.height, namePlateGBuffer.width, -100, 50)
-      //  .setText
-      //  .setAlign(RIGHT)
-      //  .setTextSize(50)
-      //  .updateGraphics()
       
     }
       
@@ -307,14 +243,6 @@ class GuiRenderer {
           this.renderGameUI()
           break
       }
-      // if (debug) {
-      //   canvas2d.clear()
-      //   if (round(frameCount) % 60 == 0) {
-      //     this.debugBuffer.updateText("[DEBUG] FPS: " + round(frameRate()))
-      //   }
-      //     this.renderDebugOverlay()
-      //     pop()
-      //   }
       }
     
 
@@ -322,83 +250,57 @@ class GuiRenderer {
       return this.currentScreen[this.currentScreen.length - 1]
     }
 
+    getResultHeadline(type) {
+      switch (type) {
+        case "checkmate":
+          return "Checkmate!"
+        case "stalemate":
+          return "Stalemate!"
+        case "king_captured":
+          return "King captured!"
+        default:
+          return "Game over"
+      }
+    }
+
+    getResultOutcome(winner) {
+      if (!winner) {
+        return "Draw"
+      }
+      if (winner === color) {
+        return "You win!"
+      }
+      return "You lose"
+    }
+
+    renderResultOverlay() {
+      if (!gameData || !gameData.result) {
+        return
+      }
+
+      const headline = this.getResultHeadline(gameData.result.type)
+      const outcome = this.getResultOutcome(gameData.result.winner)
+
+      canvas2d.push()
+      canvas2d.noStroke()
+      canvas2d.rectMode(CORNER)
+      canvas2d.fill(0, 170)
+      canvas2d.rect(0, this.height * 0.30, this.width, this.height * 0.28)
+      canvas2d.textFont(plunge)
+      canvas2d.textAlign(CENTER, CENTER)
+      canvas2d.textSize(this.height * 0.10)
+      textWithShadow2dCanvas(headline, this.width * 0.5, this.height * 0.40)
+      canvas2d.textSize(this.height * 0.055)
+      textWithShadow2dCanvas(outcome, this.width * 0.5, this.height * 0.51)
+      canvas2d.pop()
+    }
+
     renderGameUI() {
       let wHeight = this.height
       let wWidth = this.width
       canvas2d.clear()
       this.setCamera(100)
-      //canvas2d.push()
-      //  canvas2d.fill(150)
-      //  canvas2d.rectMode(CENTER)
-      //  canvas2d.fill(100)
-      //  canvas2d.rect(0, (wHeight/16)*0.85, wWidth/16, wHeight/48)
-      //canvas2d.pop()
-      //canvas2d.push()
-      //  canvas2d.fill(255)
-      //  canvas2d.textAlign(LEFT)
-      //  canvas2d.stroke(0)
-      //  textWithShadow2dCanvas("Name: " + nickname + "\nColor: " + color, this.width*0.02, this.height*0.90)
-      //  canvas2d.noStroke()
-      //canvas2d.pop()
-      //if (gameData) {
-      //  const players = gameData.players
-      //  canvas2d.push()
-      //    canvas2d.fill(255)
-      //    canvas2d.textAlign(LEFT)
-      //    textWithShadow2dCanvas("You're in a room! Code: " + gameData.roomCode, this.width*0.02, this.height*0.1)
-      //    if (players[0]) {
-      //      textWithShadow2dCanvas("Player 1: " + players[0].name, this.width*0.02, this.height*0.1+75)
-      //    }
-      //    if (players[1]) {
-      //      textWithShadow2dCanvas("Player 2: " + players[1].name, this.width*0.02, this.height*0.1+150)
-      //    } else{
-      //      textWithShadow2dCanvas("Waiting for player 2...", this.width*0.02, this.height*0.1+150)
-      //    }
-      //  canvas2d.pop()
-      //  if (check && gameData.state == "started") {
-      //    canvas2d.push()
-      //    canvas2d.fill(255)
-      //    canvas2d.textAlign(CENTER)
-      //    canvas2d.textWithShadow(check + " is in check!", 0, this.height*0.85)
-      //    canvas2d.pop()
-      //}
-      //}
-      //canvas2d.push()
-      //  canvas2d.fill(255)
-      //  canvas2d.textAlign(CENTER)
-      //  if (gameData) {
-      //    if (gameData.state == "waiting") {
-      //      textWithShadow2dCanvas("Waiting for players...", this.width*0.5, this.height*0.7)
-      //    } else if (gameData.state == "started") {
-      //      if (gameData.turn == color) {
-      //        textWithShadow2dCanvas("It's your turn!", this.width*0.5, this.height*0.7)
-      //      } else if (gameData.turn != color) {
-      //        textWithShadow2dCanvas("It's the other player's turn!", this.width*0.5, this.height*0.7)
-      //      }
-      //    } else if (gameData.state == "checkmate" || "closing") {
-      //      let winner 
-      //      if (gameData.check == "white") {
-      //        winner = "Black"
-      //      } else if (gameData.check == "black") {
-      //        winner = "White"
-      //      }
-      //      textWithShadow2dCanvas("Checkmate! " + winner + " wins!", this.width*0.5, this.height*0.7)
-      //    }
-      //}
-      //if (timeUntilLeaving != null) {
-      //  canvas2d.push()
-      //  canvas2d.textWithShadow("Leaving room in: " + timeUntilLeaving, this.width*0.5, this.height*0.8)
-      //  canvas2d.pop()
-      //}
 
-
-      //for (let i = 0; i < this.menuButtonNames.length; i++) {
-      //  canvas2d.push();
-      //  let buttonName = this.menuButtonNames[i];
-  //
-      //  this.menuButtons[buttonName].drawIcon(canvas2d, this.guiScale);
-      //  canvas2d.pop();
-      //}
 
       if (cardDataManager) {
         cardDataManager.displayDeck()
@@ -410,6 +312,8 @@ class GuiRenderer {
         this.ingameGuiElements[buttonName].drawIcon(canvas2d, this.guiScale);
         canvas2d.pop();
       }
+
+      this.renderResultOverlay()
 
       canvas2d.pop()
       canvas2d.push()
@@ -456,16 +360,6 @@ class GuiRenderer {
     canvas2d.clear()
     //canvas2d.background(200)
     
-    //canvas2d.rect(-this.width, -this.height, this.width, this.height)
-    //canvas2d.push()
-    //canvas2d.fill(255)
-    //canvas2d.ellipse(0, 0, 20)
-    //canvas2d.ellipse(0, canvas2d.height, 20)
-    //canvas2d.ellipse(canvas2d.width, 0, 20)
-    //canvas2d.ellipse(canvas2d.width, canvas2d.height, 20)
-    //canvas2d.ellipse(0, 0, 10, 10)
-    //canvas2d.pop()
-    //Render menu logo letters
     let bounceSpeed = 0.05; // Speed of the bounce
     let bounceHeight = 10*this.guiScale; // Height of the bounce
 
@@ -475,34 +369,6 @@ class GuiRenderer {
       canvas2d.pop()
     }
 
-    //Render the card logo
-    //canvas2d.push();
-    //canvas2d.noStroke();
-    ////let bounceOffset = sin((frameCount * bounceSpeed) + ((i - this.topLetters) * PI / 4)) * bounceHeight;
-    //let bounceOffset = sin((frameCount * bounceSpeed) + ((this.topLetters + this.bottomLetters) * PI / 4)) * bounceHeight; // Bounce offset for the card
-    //canvas2d.translate((100*(this.bottomLetters+1.5))*this.guiScale, (this.letterHeight*1.8)*this.guiScale, 0); // Distance from right and top of the screen
-    //canvas2d.translate(0, bounceOffset * 2.5, 0);
-    //let rotationOffset = sin((frameCount * bounceSpeed) + (16 * PI / 4)) * 0.05; // Rotation offset for slight rotation
-    //canvas2d.scale(0.4*this.guiScale)
-    //canvas2d.push();
-    //canvas2d.rotate(PI / 16 + rotationOffset);
-    //canvas2d.fill(0, 0, 0);
-    //canvas2d.translate(0, bounceOffset * 1.5, 0);
-    //canvas2d.rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
-    //canvas2d.pop();
-//
-    //canvas2d.push();
-    //canvas2d.fill(0, 0, 0);
-    //canvas2d.rotate(PI / 10 + rotationOffset);
-    //canvas2d.translate(35*this.guiScale, -30*this.guiScale, 0);
-    //canvas2d.rect(20*this.guiScale, 20*this.guiScale, backofcard.width, backofcard.height, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale, 15*this.guiScale);
-    //canvas2d.image(backofcard, 0, 0, backofcard.width, backofcard.height);
-    //canvas2d.pop();
-//
-    //canvas2d.push();
-    //canvas2d.rotate(PI / 16 + rotationOffset);
-    //canvas2d.image(backofcard, 0, bounceOffset * 1.5, backofcard.width, backofcard.height);
-    //canvas2d.pop();
 
     //Render menu buttons
     canvas2d.pop()
@@ -525,21 +391,6 @@ class GuiRenderer {
     pop()
     }
 
-    renderDebugOverlay() {
-      let wHeight = this.height
-      let wWidth = this.width
-      this.setCamera(100)
-      canvas2d.push()
-      canvas2d.scale(this.guiScale)
-      canvas2d.fill(255)
-      canvas2d.textAlign(RIGHT)
-      canvas2d.image(this.debugBuffer.gBuffer, this.width-100, 100, this.debugBuffer.gBuffer.width, this.debugBuffer.gBuffer.height)
-      canvas2d.pop()
-      push()
-      scale(0.0621) //magic number. Why? nobody knows
-      image(canvas2d, -this.width, -this.height, (this.width), (this.height))
-      pop()
-    }
 
     clickGUIButton(x, y) {
       if (this.currentScreen[this.currentScreen.length - 1] == "menu") {
@@ -561,7 +412,6 @@ class GuiRenderer {
     
   
 }
-
 
 
 /*
