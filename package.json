@@ -1,11 +1,29 @@
 {
+  "name": "enchanted-chess",
+  "version": "1.0.0",
+  "description": "A browser-based 3D chess game",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xTomCat/3d-chess.git"
+  },
+  "keywords": [
+    "chess",
+    "webgl",
+    "p5js",
+    "socket.io",
+    "multiplayer",
+    "game"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "express": "^4.19.2",
-    "http-server": "^14.1.1",
-    "socket.io": "^4.7.5",
-    "uuid": "^10.0.0"
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
   }
 }

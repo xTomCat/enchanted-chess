@@ -381,7 +381,6 @@ FodyWeavers.xsd
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
 
@@ -397,3 +396,8 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+#Replit
+.replit
+.breakpoints
+replit.nix
