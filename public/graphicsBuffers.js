@@ -964,7 +964,18 @@ class PlayerEnergyBar extends Button {
         this.diamond = new ImageButton(manadiamondblue.width, manadiamondblue.height, 0, 0).setImage(manadiamondblue.get(0, 0 , manadiamondblue.width, manadiamondblue.height)).updateGraphics().setShadow(true)
         this.greyDiamond = new ImageButton(manadiamondgrey.width, manadiamondgrey.height, 0, 0).setImage(manadiamondgrey.get(0, 0 , manadiamondgrey.width, manadiamondgrey.height)).updateGraphics().setShadow(true)
         this.circle = new ImageButton(manaorb.width, manaorb.height, 0, 0).setImage(manaorb.get(0, 0 , manaorb.width, manaorb.height)).updateGraphics().setShadow(true)
-        
+        this.maxEnergy = 6;
+        this.toolTipBuffer = new TextButton(600, 400, 50, windowHeight * 0.2)
+            .setTitle("Energy", 70)
+            .setText("Spend energy to cast cards.<br><br>Capture a pawn: +1<br>Capture any other piece: +2<br><br>Maximum: " + this.maxEnergy)
+            .setTextSize(50)
+            .setAlign(LEFT)
+            .setFadeIn(true)
+            .setHoverEffect(20, 0, 0.5)
+            .updateGraphics()
+            .setShadow(true)
+        this.setToolTip(this.toolTipBuffer)
+
         this.initIcon();
     }
 
@@ -1007,7 +1018,7 @@ class PlayerEnergyBar extends Button {
         this.gBuffer.image(text, this.height + (this.diamond.width*0.1) - 5, this.diamond.height/8, text.width, text.height)
         this.gBuffer.push()
         this.gBuffer.translate(this.height + 5, this.height*0.62)
-        for (let i = 0; i <= this.energy; i++) {
+        for (let i = 0; i < this.energy; i++) {
             this.gBuffer.push()
             this.gBuffer.scale(0.3)
             this.gBuffer.translate(i*diamond.width*0.9, 0)
@@ -1016,7 +1027,7 @@ class PlayerEnergyBar extends Button {
             this.gBuffer.image(diamond, -10, -10, diamond.width, diamond.height)
             this.gBuffer.pop()
         }
-        for (let i = this.energy; i <= 6; i++) {
+        for (let i = this.energy; i < this.maxEnergy; i++) {
             this.gBuffer.push()
             this.gBuffer.scale(0.3)
             this.gBuffer.translate(i*diamond.width*0.9, 0)

@@ -8,6 +8,8 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
+const MAX_ENERGY = 6;
+const CAPTURE_ENERGY = { pawn: 1, default: 2 };
 
 let connectedPlayers = [];
 let games = {};
@@ -107,12 +109,14 @@ io.on('connection', (socket) => {
           return
         }
 
+        player.energy -= card.cost
+
         if (game.activateCardEffect(card, x, y, player)) {
-          player.energy -= card.cost
           player.removeCardFromDeck(index)
           console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y)
           io.to('game-' + game.roomCode).emit('receivePlayCard', player.color, index, x, y, card)
         } else {
+          player.energy += card.cost
           socket.emit('error', 'Invalid card target')
         }
       } finally {
@@ -305,7 +309,7 @@ function sleep(ms) {
 class Player {
     constructor(name, socketId) {
       this.name = name;
-      this.energy = 6;
+      this.energy = 0;
       this.deck = [];
       this.socketId = socketId;
       this.color = "unset!";
@@ -464,6 +468,8 @@ class Game {
         return { success: false, reason: 'invalid_move' };
       }
 
+      let capturedPiece = this.getTileData(to.x, to.y).piece;
+
       this.setTileData(to.x, to.y, { piece: piece });
       this.setTileData(from.x, from.y, { piece: null });
       piece.lastMove = move
@@ -471,9 +477,13 @@ class Game {
       this.lastMovedPiece = piece
 
       if (this.isInCheck(this.turn)) {
-        this.setTileData(to.x, to.y, { piece: null });
+        this.setTileData(to.x, to.y, { piece: capturedPiece });
         this.setTileData(from.x, from.y, { piece: piece });
         return { success: false, reason: 'exposes_king' };
+      }
+
+      if (capturedPiece) {
+        this.awardCaptureEnergy(this.turn, capturedPiece);
       }
 
       if (this.isInCheck("black")) {
@@ -503,6 +513,16 @@ class Game {
 
       return { success: true };
     }
+
+    awardCaptureEnergy(color, capturedPiece) {
+      const player = color === "white" ? this.players[0] : this.players[1];
+      if (!player) {
+        return;
+      }
+      const reward = CAPTURE_ENERGY[capturedPiece.type] || CAPTURE_ENERGY.default;
+      player.energy = Math.min(player.energy + reward, MAX_ENERGY);
+    }
+
     populateBoard() {
         for (let i = 0; i < this.width; i++) {
           this.setTileData(i, 1, { piece: new ChessPiece("pawn", "black") });
