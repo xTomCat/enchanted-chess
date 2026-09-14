@@ -179,6 +179,9 @@ function setup() {
         if (opponentNamePlate.getText() !== opponent.name) {
           opponentNamePlate.updateText(opponent.name)
         }
+        if (opponent.energy !== opponentNamePlate.energy) {
+          opponentNamePlate.update(opponent.energy)
+        }
         if (gameData.turn == color)
           guiRenderer.ingameGuiElements.statusText.updateText("It's your turn!")
         else {
@@ -268,6 +271,10 @@ function closeRoom() {
 
 function createRoom() {
   socket.emit('createRoom', cardDataManager.deckAsServerData())
+}
+
+function playSolo() {
+  socket.emit('createRoom', cardDataManager.deckAsServerData(), true)
 }
 
 function promptNickName() {

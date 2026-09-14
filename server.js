@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const PieceMovement = require('./public/shared/pieceMovement.js');
+const ChessAI = require('./chessAI.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -9,6 +10,7 @@ const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
 const MAX_ENERGY = 6;
+const THINK_MS = 500;
 const CAPTURE_ENERGY = { pawn: 1, default: 2 };
 
 let connectedPlayers = [];
@@ -95,31 +97,10 @@ io.on('connection', (socket) => {
         return
       }
 
-      if (!player.deck[index]) {
-        socket.emit('error', 'Card not found in deck')
-        return
-      }
-
       player.pendingCardPlay = true
-      let card = player.deck[index]
-
       try {
-        if (card.cost > player.energy) {
-          socket.emit('error', 'Not enough energy')
-          return
-        }
-
-        player.energy -= card.cost
-
-        if (game.activateCardEffect(card, x, y, player)) {
-          player.removeCardFromDeck(index)
-          console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y)
-          io.to('game-' + game.roomCode).emit('receivePlayCard', player.color, index, x, y, card)
-          game.evaluateGameState()
-        } else {
-          player.energy += card.cost
-          socket.emit('error', 'Invalid card target')
-        }
+        const error = game.playCard(player, index, x, y)
+        if (error) socket.emit('error', error)
       } finally {
         player.pendingCardPlay = false
       }
@@ -182,7 +163,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('createRoom', (deckData) => {
+    socket.on('createRoom', (deckData, solo) => {
         const roomCode = generateRoomCode6Digits();
         const parsedDeck = JSON.parse(deckData)
         let serverSideDeck = [];
@@ -210,6 +191,14 @@ io.on('connection', (socket) => {
         player.setColor("white")
         player.generateBoardOnClient(game.getBoard())
         sendGameDataToRoom(roomCode)
+        if (solo) {
+          const bot = new Player('Computer', 'bot-' + roomCode)
+          bot.isBot = true
+          game.addPlayer(bot)
+          bot.setColor("black")
+          bot.setDeck(cardDataManager.cardData.map(c => new Card(c.id, c.name, c.cost)))
+          game.start()
+        }
     });
 
     socket.on('joinGame', (roomCode, deckData) => {
@@ -441,7 +430,7 @@ class Game {
       }
       console.log("Game closed with ropm code: " + this.roomCode);
       console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
-      games[this.roomCode] = null;
+      delete games[this.roomCode];
       this.players = [];
       
       
@@ -488,8 +477,44 @@ class Game {
       this.turn = this.turn === "white" ? "black" : "white";
 
       this.evaluateGameState();
+      this.maybeBotMove();
 
       return { success: true };
+    }
+
+    maybeBotMove() {
+      const bot = this.players[this.turn === "white" ? 0 : 1];
+      if (this.result || !bot || !bot.isBot) return;
+      const started = Date.now();
+      for (let i = bot.deck.length - 1; i >= 0; i--) {
+        const target = ChessAI.bestCardTarget(bot.deck[i], this, bot);
+        if (target) this.playCard(bot, i, target.x, target.y);
+      }
+      if (this.result) return;
+      const moves = ChessAI.rankedMoves(this, this.turn);
+      setTimeout(() => {
+        const played = moves.find(m => this.move(m).success);
+        if (played) {
+          io.to('game-' + this.roomCode).emit('move', played);
+          sendGameDataToRoom(this.roomCode);
+        }
+      }, Math.max(0, THINK_MS - (Date.now() - started)));
+    }
+
+    playCard(player, index, x, y) {
+      const card = player.deck[index];
+      if (!card) return 'Card not found in deck';
+      if (card.cost > player.energy) return 'Not enough energy';
+      player.energy -= card.cost;
+      if (!this.activateCardEffect(card, x, y, player)) {
+        player.energy += card.cost;
+        return 'Invalid card target';
+      }
+      player.removeCardFromDeck(index);
+      console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y);
+      io.to('game-' + this.roomCode).emit('receivePlayCard', player.color, index, x, y, card);
+      this.evaluateGameState();
+      return null;
     }
 
     awardCaptureEnergy(color, capturedPiece) {
@@ -745,25 +770,19 @@ class Card {
         default:
           break;
       }
-      console.log("Card selected. Possible tiles:")
-      console.log(tiles);
       return tiles;
     }
   
     getFireballTiles(chessBoardArray, player) {
-      console.log("Getting fireball tiles...")
-      console.log(chessBoardArray)
       let tiles = []
       for (let i = 0; i < chessBoardArray.length; i++) {
         //console.log("Looping through row " + i)
         //console.log("Row length: " + chessBoardArray[i].length)
-        console.log(chessBoardArray[i])
         for (let j = 0; j < chessBoardArray[i].length; j++) {
           //console.log("Looping through column " + j)
           let piece = chessBoardArray[i][j].piece
           if (piece) {
             if (piece.color === player.color) {
-              console.log("Looping through: " + piece.type + " at " + i + ", " + j)
               //tiles.push({x: i, y: j})
               let directions = [ 
                 { x: 1, y: 0 },
@@ -784,9 +803,8 @@ class Card {
                   if (chessBoardArray[newX][newY].piece === null) {
                     //tiles.push({ x: newX, y: newY })
                   } else {
-                    console.log(chessBoardArray[newX][newY].piece)
                     if (chessBoardArray[newX][newY].piece) {
-                      if (chessBoardArray[newX][newY].piece.color !== piece.color) {
+                      if (chessBoardArray[newX][newY].piece.color !== piece.color && chessBoardArray[newX][newY].piece.type !== "king") {
                         tiles.push({ x: newX, y: newY })
                       }
                       break

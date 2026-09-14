@@ -299,7 +299,7 @@ class CardObject {
                 if (chessBoardArray[newX][newY].piece === null) {
                   //tiles.push({ x: newX, y: newY })
                 } else {
-                  if (chessBoardArray[newX][newY].piece.color !== piece.color) {
+                  if (chessBoardArray[newX][newY].piece.color !== piece.color && chessBoardArray[newX][newY].piece.type !== "king") {
                     tiles.push({ x: newX, y: newY })
                   }
                   break

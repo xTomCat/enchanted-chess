@@ -11,16 +11,24 @@ class GuiRenderer {
       const baseWidth = 1920;
       const baseHeight = 1080;
       this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
-      this.menuButtonNames = ["createARoom", "joinARoom", "cardDeck", "options", "nickname"];
+      this.menuButtonNames = ["singlePlayer", "createARoom", "joinARoom", "cardDeck", "options", "nickname"];
       this.ingameGuiElementNames = ["hamburgerMenu", "gameTime",
-        "opponentNamePlate", "playerNamePlate", "playerEnergyBar", "statusText"]// "opponentEnergy", 
+        "opponentNamePlate", "playerNamePlate", "playerEnergyBar", "statusText"]
         //"playerNamePlate", "playerEnergy", 
         //"card1", "card2", "card3", "card4", 
         //"chatBox", "chatInput"]
       this.ingameGuiElements = {}
       this.menuButtons = {}
-      this.menuButtons.createARoom = 
+      this.menuButtons.singlePlayer =
         new TextButton(630, 50, 50, 620)
+          .setHoverEffect(20, 0, 0.5)
+          .setText("Single player")
+          .setTextSize(50)
+          .setAlign(LEFT)
+          .onClick(playSolo)
+          .updateGraphics()
+      this.menuButtons.createARoom = 
+        new TextButton(630, 50, 50, 690)
           .setHoverEffect(20, 0, 0.5)
           .setText("Create a room")
           .setTextSize(50)
@@ -28,7 +36,7 @@ class GuiRenderer {
           .onClick(createRoom)
           .updateGraphics()
       this.menuButtons.joinARoom =
-        new TextButton(470, 50, 50, 690)
+        new TextButton(470, 50, 50, 760)
           .setHoverEffect(20, 0, 0.5)
           .setText("Join a room")
           .setTextSize(50)
@@ -36,14 +44,14 @@ class GuiRenderer {
           .onClick(joinGameByRoomCode)
           .updateGraphics()
       this.menuButtons.cardDeck =
-        new TextButton(380, 50, 50, 760)
+        new TextButton(380, 50, 50, 830)
           .setHoverEffect(20, 0, 0.5)
           .setText("Card Deck")
           .setTextSize(50)
           .setAlign(LEFT)
           .updateGraphics()
       this.menuButtons.options =
-        new TextButton(330, 50, 50, 830)
+        new TextButton(330, 50, 50, 900)
           .setHoverEffect(20, 0, 0.5)
           .setText("Options")
           .setTextSize(50)
@@ -159,6 +167,7 @@ class GuiRenderer {
       this.ingameGuiElements.playerEnergyBar = new PlayerEnergyBar(600, 155, 50, -50)
         .setAlign(LEFT)
         .anchorToBottom(true)
+
 
 
       

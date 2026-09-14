@@ -884,6 +884,9 @@ class OpponentNamePlate extends Button {
         this.plate = true;
         this.personIcon = new ImageButton(personicon.width, personicon.height, 0, 0).setImage(personicon.get(0, 0 , personicon.width, personicon.height)).updateGraphics().setShadow(true)
         this.diamond = new ImageButton(manadiamondred.width, manadiamondred.height, 0, 0).setImage(manadiamondred.get(0, 0 , manadiamondred.width, manadiamondred.height)).updateGraphics().setShadow(true)
+        this.greyDiamond = new ImageButton(manadiamondgrey.width, manadiamondgrey.height, 0, 0).setImage(manadiamondgrey.get(0, 0 , manadiamondgrey.width, manadiamondgrey.height)).updateGraphics().setShadow(true)
+        this.energy = 0;
+        this.maxEnergy = 6;
         this.initIcon();
     }
 
@@ -891,11 +894,17 @@ class OpponentNamePlate extends Button {
         return this.text.getText();
     }
 
+    update(energy) {
+        this.energy = energy;
+        this.initIcon(true)
+    }
+
     initIcon(update) {
         let personIcon = this.personIcon.getGraphicsObject()
         let personIconShadow = this.personIcon.getShadow()
         let diamond = this.diamond.getGraphicsObject()
         let diamondShadow = this.diamond.getShadow()
+        let greyDiamond = this.greyDiamond.getGraphicsObject()
         let text = this.text.getGraphicsObject()
         let vsText = this.vs.getGraphicsObject()
         if (update) {
@@ -917,13 +926,13 @@ class OpponentNamePlate extends Button {
         
         this.gBuffer.push()
         this.gBuffer.translate(this.width*0.2, this.height*0.55)
-        for (let i = 0; i <= 7; i++) {
+        for (let i = 0; i < this.maxEnergy; i++) {
             this.gBuffer.push()
             this.gBuffer.scale(0.2)
             this.gBuffer.translate(i*diamond.width, 0)
             //this.gBuffer.rect(0, 0, diamond.width, diamond.height)
             this.gBuffer.image(diamondShadow, 15, 15, diamond.width, diamond.height)
-            this.gBuffer.image(diamond, 0, 0, diamond.width, diamond.height)
+            this.gBuffer.image(i < this.energy ? diamond : greyDiamond, 0, 0, diamond.width, diamond.height)
             this.gBuffer.pop()
         }
         this.gBuffer.pop()
