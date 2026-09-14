@@ -79,11 +79,13 @@ class Button {
         if (this.isSelected) {
             console.log("Card toggled OFF")
             this.isSelected = false;
+            cardDataManager.clearPendingPlay()
             chessBoard.resetAvailableMoves()
         } else {
             for (let card of cardDataManager.playerDeck) {
                 card.iconBuffer.isSelected = false;
             }
+            cardDataManager.clearPendingPlay()
             chessBoard.resetAvailableMoves()
             chessBoard.resetSelectedTiles()
             console.log("Card toggled ON")

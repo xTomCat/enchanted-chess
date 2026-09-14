@@ -18,6 +18,7 @@ class GuiRenderer {
         //"card1", "card2", "card3", "card4", 
         //"chatBox", "chatInput"]
       this.ingameGuiElements = {}
+      this.cardChoiceOpen = false
       this.menuButtons = {}
       this.menuButtons.singlePlayer =
         new TextButton(630, 50, 50, 620)
@@ -400,6 +401,53 @@ class GuiRenderer {
     pop()
     }
 
+
+    openCardChoice(title, choices, callback) {
+      this.closeCardChoice()
+      const width = 640, height = 270, pad = 8
+      const x = (1920 - width) / 2, y = 380
+      const panel = createGraphics(width + pad, height + pad)
+      panel.noStroke()
+      panel.fill(0, 0, 0, 90)
+      panel.rect(pad, pad, width, height, 22)
+      panel.fill(18, 14, 26, 244)
+      panel.rect(0, 0, width, height, 22)
+      panel.textFont(plunge)
+      panel.textAlign(CENTER, CENTER)
+      panel.textSize(42)
+      panel.fill(238, 230, 245)
+      panel.text(title, width / 2, 64)
+      this.ingameGuiElements.cardChoicePanel = new ImageButton(width + pad, height + pad, x, y)
+        .setImage(panel)
+        .updateGraphics()
+      this.ingameGuiElementNames.push("cardChoicePanel")
+
+      const addOption = (label, size, color, centreX, offsetY, onPick) => {
+        const name = "cardChoice" + this.ingameGuiElementNames.length
+        const button = new TextButton(300, size + 20, 0, 0)
+          .setText(label)
+          .setTextSize(size)
+          .setColor(color[0], color[1], color[2])
+          .setHoverEffect(0, -8, 0.5)
+          .onClick(onPick)
+          .updateGraphics()
+        button.setPosition(centreX - button.getTextWidth() / 2, y + offsetY)
+        this.ingameGuiElements[name] = button
+        this.ingameGuiElementNames.push(name)
+      }
+
+      choices.forEach((choice, i) => addOption(
+        choice.charAt(0).toUpperCase() + choice.slice(1), 54, [255, 255, 255],
+        x + width * (i + 0.5) / choices.length, 120,
+        () => { this.closeCardChoice(); callback(choice) }))
+      addOption("Cancel", 30, [150, 142, 162], x + width / 2, 206, () => this.closeCardChoice())
+      this.cardChoiceOpen = true
+    }
+
+    closeCardChoice() {
+      this.ingameGuiElementNames = this.ingameGuiElementNames.filter(name => !name.startsWith("cardChoice"))
+      this.cardChoiceOpen = false
+    }
 
     clickGUIButton(x, y) {
       if (this.currentScreen[this.currentScreen.length - 1] == "menu") {

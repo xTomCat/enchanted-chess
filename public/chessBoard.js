@@ -1,3 +1,5 @@
+const FLASH_SECONDS = 0.45
+
 class Chessboard {
   constructor(width, height, tileSize, whiteTexture, blackTexture) {
     this.width = width
@@ -72,6 +74,9 @@ class Chessboard {
     } else {
       console.error("Invalid tile coordinates");
     }
+  }
+  markFlash(x, y, color) {
+    this.setTileData(x, y, { flash: totalTime + FLASH_SECONDS, flashColor: color || [255, 255, 255] });
   }
   getTileData(x, y) {
     if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
@@ -289,6 +294,11 @@ class Chessboard {
           //noStroke()
         } 
 
+        if (chessBoard[i][j].flash > totalTime) {
+          let fade = (chessBoard[i][j].flash - totalTime) / FLASH_SECONDS
+          let c = chessBoard[i][j].flashColor
+          emissiveMaterial(c[0] * fade, c[1] * fade, c[2] * fade)
+        }
 
         //Draw the top plane
         square(0, 0, tileSize)
@@ -339,6 +349,7 @@ class Chessboard {
     }
 
   selectTile(x, y) {
+    if (guiRenderer.cardChoiceOpen) return;
     let chessBoard = this.chessBoard;
     let pieceMoved = false;
     availableMoves = null;

@@ -1,24 +1,23 @@
+const CARD_PLAY_FRAMES = 25
+const CARD_LAYOUT_FRAMES = 15
+
 class CardDataManager {
     constructor() {
         this.cardData = []
-        this.cardObjects = []; //These are the detailed button display objects with hovers, shadows, etc. 
         this.playerDeck = []; //The basic card datas will be pushed into here, and detailed objects are displayed based on these.
         this.playingAniamtion = [];
+        this.pendingOrigin = null;
         this.init();
     }
 
     init() {
         this.cardData = CardDefinitions.CARDS.map(card => ({ ...card, image: cardImages[card.name] }));
-        this.cardObjects.push(new CardObject(this.cardData[0]));
         this.resetDeck()
     }
 
     resetDeck() {
       this.playerDeck = [];
-      this.addCardToDeck("Placeholder");
-      this.addCardToDeck("Placeholder");
-      this.addCardToDeck("Placeholder");
-      this.addCardToDeck("Fireball");
+      ["Fireball", "Summon Pawn", "Blink", "Transmute"].forEach(name => this.addCardToDeck(name));
     }
 
     deckAsServerData() {
@@ -32,10 +31,6 @@ class CardDataManager {
       }
       let toReturn = JSON.stringify(deck);
       return toReturn;
-    }
-
-    getCardById(id) {
-        return this.cards.find(card => card.id === id);
     }
 
     addCardToDeck(cardName) {
@@ -107,45 +102,54 @@ class CardDataManager {
         targY = (targY - ((guiRenderer.height/2)) - ((selectedCard.iconBuffer.gBuffer.height/guiRenderer.guiScale)/2))
       }
       selectedCard.iconBuffer.setFadeOut(true, 30)
-      selectedCard.iconBuffer.animateTo(targX, targY, 100, () => this.activateCardEffect(selectedCard, x, y));
+      selectedCard.iconBuffer.animateTo(targX, targY, CARD_PLAY_FRAMES, () => this.activateCardEffect(selectedCard, x, y));
     }
 
     requestPlayCard(x, y) {
-      let cardIndex = this.getSelectedCardIndex()
-      if (cardIndex === null) {
-        console.error("No card selected.");
-        return;
-      }
-      let card = this.playerDeck[cardIndex];
+      const cardIndex = this.getSelectedCardIndex()
+      if (cardIndex === null) return console.error("No card selected.");
+      const card = this.playerDeck[cardIndex];
+      const definition = CardDefinitions.byName(card.name);
       if (gameData) {
-        if (color != gameData.turn) {
-          console.error("It isn't your turn!")
+        if (color != gameData.turn) return setStatus("It isn't your turn!", 2);
+        if (guiRenderer.ingameGuiElements.playerEnergyBar.getEnergy() < card.cost) return setStatus("Not enough energy!", 2);
+        const stageTiles = CardDefinitions.getPlayTiles(card.name, chessBoard, color, this.pendingOrigin);
+        if (definition.tiles && !stageTiles.some(tile => tile.x === x && tile.y === y)) {
+          return setStatus("Invalid target for " + card.name, 2);
+        }
+        if (definition.originTiles && !this.pendingOrigin) {
+          this.pendingOrigin = { x: x, y: y };
+          chessBoard.resetAvailableMoves();
+          chessBoard.markAvailableMoves(CardDefinitions.getPlayTiles(card.name, chessBoard, color, this.pendingOrigin));
           return;
         }
-        if (guiRenderer.ingameGuiElements.playerEnergyBar.getEnergy() < this.playerDeck[cardIndex].cost) {
-          console.error("Not enough energy!")
-          return;
-
-        }
-        if (!CardDefinitions.isValidTarget(card.name, chessBoard, x, y, color)) {
-          console.error("Invalid target for " + card.name);
-          return;
+        if (definition.choices) {
+          return guiRenderer.openCardChoice(definition.prompt, definition.choices, choice => this.sendPlayCard(cardIndex, x, y, choice));
         }
       }
-      socket.emit('playCard', cardIndex, x, y);
-
+      this.sendPlayCard(cardIndex, x, y, this.pendingOrigin);
     }
 
-    activateCardEffect(card, x, y, opponent = false, caster = color) {
+    sendPlayCard(index, x, y, extra) {
+      socket.emit('playCard', index, x, y, extra);
+      this.pendingOrigin = null;
+    }
+
+    clearPendingPlay() {
+      this.pendingOrigin = null;
+      guiRenderer.closeCardChoice();
+    }
+
+    flashCardEffect(card, x, y, extra) {
+      const flashColor = CardDefinitions.byName(card.name).flash;
+      chessBoard.markFlash(x, y, flashColor);
+      if (extra && extra.x !== undefined) chessBoard.markFlash(extra.x, extra.y, flashColor);
+    }
+
+    activateCardEffect(card, x, y, opponent = false) {
       if (!opponent) {
-        let index = this.getCardIndex(card);
-        console.log("Activating card effect for card with name " + card.name + " at location " + x + ", " + y);
-        cardDataManager.removeCardFromDeck(index);
-        cardDataManager.updateCardPositions();
-      }
-      if (!CardDefinitions.applyEffect(card.name, chessBoard, x, y, caster)) {
-        console.error("Invalid target for " + card.name);
-        return;
+        this.removeCardFromDeck(this.getCardIndex(card));
+        this.updateCardPositions();
       }
       chessBoard.resetAvailableMoves()
     }
@@ -164,7 +168,7 @@ class CardDataManager {
         let y = windowHeight * 0.6;
         let totalCards = this.playerDeck.length;
         let heightAdjustment = Math.abs(i - (totalCards - 1) / 2) * 20; // Adjust the multiplier for desired height effect
-        card.animateTo(x, y + heightAdjustment, 100);
+        card.animateTo(x, y + heightAdjustment, CARD_LAYOUT_FRAMES);
 
         // Calculate rotation angle based on position relative to center
         
@@ -201,7 +205,7 @@ class CardObject {
    }
 
    getCardPlayTiles(chessBoard) {
-    return CardDefinitions.getPlayTiles(this.name, chessBoard, color);
+    return CardDefinitions.getPlayTiles(this.name, chessBoard, color, cardDataManager.pendingOrigin);
   }
 
    createBuffers() {

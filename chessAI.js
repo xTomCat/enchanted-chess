@@ -104,11 +104,13 @@ function rankedMoves(game, color) {
 
 function bestCardTarget(card, game, player) {
   if (card.cost > player.energy) return null;
+  const definition = CardDefinitions.byName(card.name);
+  if (!definition || definition.originTiles || definition.choices) return null;
   const board = game.getBoard();
   let best = null;
   for (const tile of CardDefinitions.getPlayTiles(card.name, game, player.color)) {
     const piece = board[tile.x][tile.y].piece;
-    if (piece && (!best || VALUE[piece.type] > VALUE[best.piece.type])) best = { x: tile.x, y: tile.y, piece };
+    if (piece && piece.color !== player.color && (!best || VALUE[piece.type] > VALUE[best.piece.type])) best = { x: tile.x, y: tile.y, piece };
   }
   return best && VALUE[best.piece.type] >= MIN_CARD_VALUE ? best : null;
 }

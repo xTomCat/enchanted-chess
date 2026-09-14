@@ -28,6 +28,18 @@ let totalTimeFloor = 0
 let targetFrameRate = 60
 let selectedThisClick = false
 let cardImages = {}
+let statusHoldUntil = 0
+let baseStatus = ""
+
+function setStatus(text, holdSeconds = 0) {
+  if (!guiRenderer || !guiRenderer.ingameGuiElements.statusText) return
+  if (holdSeconds) statusHoldUntil = totalTime + holdSeconds
+  else {
+    baseStatus = text
+    if (totalTime < statusHoldUntil) return
+  }
+  guiRenderer.ingameGuiElements.statusText.updateText(text)
+}
 const cardHeight = 435
 const cardWidth = 313
 
@@ -103,19 +115,17 @@ function setup() {
     }
   })
 
-  socket.on('receivePlayCard', (pColor, index, x, y, card) => {
+  socket.on('error', message => setStatus(message, 2))
+
+  socket.on('receivePlayCard', (pColor, index, x, y, card, extra) => {
+    cardDataManager.flashCardEffect(card, x, y, extra)
     console.log(pColor + "is playing card with index: " + index)
     if (pColor == color) {
       
       cardDataManager.playCard(index, x, y)
      } else {
-       cardDataManager.activateCardEffect(card, x, y, true, pColor)
+       cardDataManager.activateCardEffect(card, x, y, true)
      }
-  })
-
-  socket.on('receiveFakePiece', (x, y, piece) => {
-    console.log("received fake piece")
-    chessBoard.setTileData(x, y, {piece: new ChessPiece(piece.type, piece.color)})
   })
 
   socket.on('roomCreated', (roomCode) => {
@@ -182,11 +192,7 @@ function setup() {
         if (opponent.energy !== opponentNamePlate.energy) {
           opponentNamePlate.update(opponent.energy)
         }
-        if (gameData.turn == color)
-          guiRenderer.ingameGuiElements.statusText.updateText("It's your turn!")
-        else {
-          guiRenderer.ingameGuiElements.statusText.updateText("It's " + opponent.name + "'s turn!")
-        }
+        setStatus(gameData.turn == color ? "It's your turn!" : "It's " + opponent.name + "'s turn!")
         
         
         
@@ -227,11 +233,11 @@ function setup() {
   socket.on('leavingSoon', (count) => {
     timeUntilLeaving = count
     if (guiRenderer) {
-      guiRenderer.ingameGuiElements.statusText.updateText("Leaving in " + timeUntilLeaving + " seconds")
+      setStatus("Leaving in " + timeUntilLeaving + " seconds")
     }
     if (timeUntilLeaving == 0) {
       timeUntilLeaving = null
-      guiRenderer.ingameGuiElements.statusText.updateText("")
+      setStatus("")
     }
   })
 }
@@ -317,6 +323,7 @@ function draw() {
   deltaTime = (currentFrameTime - lastFrameTime)/1000
   lastFrameTime = currentFrameTime 
   totalTime += deltaTime
+  if (statusHoldUntil && totalTime > statusHoldUntil) { statusHoldUntil = 0; setStatus(baseStatus) }
   framesSinceMouseMoved++
   background(100)
   guiRenderer.renderBackground()

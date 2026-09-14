@@ -71,7 +71,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('playCard', (index, x, y) => {
+    socket.on('playCard', (index, x, y, extra) => {
       const player = connectedPlayers.find(p => p.socketId === socket.id)
       if (!player) {
         socket.emit('error', 'Player not found')
@@ -100,7 +100,7 @@ io.on('connection', (socket) => {
 
       player.pendingCardPlay = true
       try {
-        const error = game.playCard(player, index, x, y)
+        const error = game.playCard(player, index, x, y, extra)
         if (error) socket.emit('error', error)
       } finally {
         player.pendingCardPlay = false
@@ -283,9 +283,7 @@ function sendGameDataToRoom(roomCode) {
         decks: {
           white: whiteDeck,
           black: blackDeck
-        },
-        //fakePieces: fakePieces
-        
+        }
 }
 io.to('game-' + roomCode).emit('gameData', gameData);
 }
@@ -297,7 +295,7 @@ function sleep(ms) {
 class Player {
     constructor(name, socketId) {
       this.name = name;
-      this.energy = 0;
+      this.energy = MAX_ENERGY;
       this.deck = [];
       this.socketId = socketId;
       this.color = "unset!";
@@ -355,7 +353,6 @@ class Game {
     this.check = null
     this.result = null
     this.lastMove = null
-    this.fakePieceQueue = []
     this.lastMovedPiece
     for (let i = 0; i < 8; i++) {
         this.chessBoard.push([]);
@@ -502,18 +499,18 @@ class Game {
       }, Math.max(0, THINK_MS - (Date.now() - started)));
     }
 
-    playCard(player, index, x, y) {
+    playCard(player, index, x, y, extra) {
       const card = player.deck[index];
       if (!card) return 'Card not found in deck';
       if (card.cost > player.energy) return 'Not enough energy';
       player.energy -= card.cost;
-      if (!this.activateCardEffect(card, x, y, player)) {
+      if (!this.activateCardEffect(card, x, y, player, extra)) {
         player.energy += card.cost;
         return 'Invalid card target';
       }
       player.removeCardFromDeck(index);
       console.log("Player " + player.name + " played card " + card.name + " at " + x + ", " + y);
-      io.to('game-' + this.roomCode).emit('receivePlayCard', player.color, index, x, y, card);
+      io.to('game-' + this.roomCode).emit('receivePlayCard', player.color, index, x, y, card, extra);
       this.evaluateGameState();
       return null;
     }
@@ -667,25 +664,13 @@ class Game {
       }
     }
 
-    activateCardEffect(card, x, y, player) {
-      const before = this.getTileData(x, y).piece;
-      if (!CardDefinitions.applyEffect(card.name, this, x, y, player.color)) {
+    activateCardEffect(card, x, y, player, extra) {
+      if (!CardDefinitions.applyEffect(card.name, this, x, y, player.color, extra)) {
         console.error("Invalid target for " + card.name);
         return false;
       }
       sendGameDataToRoom(this.roomCode)
-      if (before && !this.getTileData(x, y).piece) this.sendFakePiece(x, y, before, player)
       return true
-    }
-
-    sendFakePiece(x, y, piece, player) {
-      let fakePiece = new ChessPiece(piece.type, piece.color)
-      //this.fakePieceQueue.push({x: x, y: y, piece: fakePiece})
-      io.to(player.socketId).emit('receiveFakePiece', x, y, fakePiece)
-    }
-
-    clearFakePieceQueue() {
-      this.fakePieceQueue = []
     }
 
 }
@@ -760,6 +745,8 @@ class CardDataManager {
 
 
 }
+
+CardDefinitions.setPieceClass(ChessPiece);
 
 let cardDataManager = new CardDataManager();
   
