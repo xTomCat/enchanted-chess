@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    container_name: enchantedchess
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${BIND_ADDR:-127.0.0.1}:${BIND_PORT:-3000}:3000"

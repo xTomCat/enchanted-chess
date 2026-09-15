@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 const MAX_ENERGY = 6;
 const THINK_MS = 500;
 const CAPTURE_ENERGY = { pawn: 1, default: 2 };

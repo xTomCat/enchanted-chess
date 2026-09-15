@@ -401,3 +401,6 @@ FodyWeavers.xsd
 .replit
 .breakpoints
 replit.nix
+
+# Local environment overrides (host port bindings, etc.)
+.env
