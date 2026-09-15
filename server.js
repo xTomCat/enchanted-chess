@@ -288,7 +288,7 @@ function sleep(ms) {
 class Player {
     constructor(name, socketId) {
       this.name = name;
-      this.energy = MAX_ENERGY;
+      this.energy = 0;
       this.deck = [];
       this.socketId = socketId;
       this.color = "unset!";
