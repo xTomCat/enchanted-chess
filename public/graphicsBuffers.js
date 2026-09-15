@@ -263,10 +263,14 @@ class Button {
         if (this.anchorBottom) {
             buttonY = windowHeight - (this.gBuffer.height - this.y) * guiScale
         }
-        let buttonWidth = this.gBuffer.width * guiScale * this.scale; // Approximate width of the button
+        let buttonWidth = (this.hitWidth || this.gBuffer.width) * guiScale * this.scale; // Approximate width of the button
         let buttonHeight = this.gBuffer.height * guiScale * this.scale; // Approximate height of the button
         let buttonMinWidth = buttonX
         let buttonMinHeight = buttonY
+        if (this.align == CENTER) {
+            buttonMinWidth -= buttonWidth / 2
+            buttonMinHeight -= buttonHeight / 2
+        }
 
         if (this.components.length > 0) {
             for (let component of this.components) {
@@ -342,12 +346,16 @@ class Button {
             if (this.toolTip) {
                 let show = false
                 let anotherCardIsHovered = false
+                let aCardIsSelected = false
+                let isACard = false
                 for (let card of cardDataManager.playerDeck) {
                     if (card.iconBuffer.isHovered) {
                         anotherCardIsHovered = true
                     }
+                    if (card.iconBuffer.isSelected) aCardIsSelected = true
+                    if (card.iconBuffer === this) isACard = true
                 }
-                if (this.isHovered) {
+                if (this.isHovered && (isACard || !aCardIsSelected)) {
                     show = true
                 }
                 else if (this.isSelected && !anotherCardIsHovered) {
@@ -463,10 +471,14 @@ class Button {
         if (this.anchorBottom) {
             buttonY = windowHeight - (this.gBuffer.height - this.y) * guiScale
         }
-        let buttonWidth = this.gBuffer.width * guiScale * this.scale; // Approximate width of the button
+        let buttonWidth = (this.hitWidth || this.gBuffer.width) * guiScale * this.scale; // Approximate width of the button
         let buttonHeight = this.gBuffer.height * guiScale * this.scale; // Approximate height of the button
         let buttonMinWidth = buttonX
         let buttonMinHeight = buttonY
+        if (this.align == CENTER) {
+            buttonMinWidth -= buttonWidth / 2
+            buttonMinHeight -= buttonHeight / 2
+        }
         let bounceOffsetX = 0
         let bounceOffsetY = 0
         let rotationOffset = 0
@@ -722,6 +734,14 @@ class TextButton extends Button {
         this.updateGraphics()
     }
 
+    getTextHeight() {
+        canvas2d.drawingContext.font = `${this.size}px plunge`;
+        const descent = canvas2d.drawingContext.measureText(this.text).actualBoundingBoxDescent || this.size * 0.25;
+        const lines = this.countLineBreaks(this.text) + 1 + (this.title ? 1 : 0);
+        const titleExtra = this.titleSize ? this.titleSize - this.size : 0;
+        return Math.ceil(this.size * lines + titleExtra + descent + 10);
+    }
+
     getTextWidth() {
         canvas2d.drawingContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
         return canvas2d.drawingContext.measureText(this.text).width + 20; // Measure the actual text width, with an offset for the shadow
@@ -752,17 +772,13 @@ class TextButton extends Button {
         this.gBuffer.textFont(plunge);
         this.gBuffer.textSize(this.size);
         this.gBuffer.textAlign(LEFT);
-        canvas2d.drawingContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
-        const textWidth = canvas2d.drawingContext.measureText(this.text).width + 20; // Measure the actual text width, with an offset for the shadow
-        const textHeight = this.size * 1.2; // Height is directly based on the size
-
         this.width = this.getDimensionsWithComponents("width")
         this.height = this.getDimensionsWithComponents("height")
 
         if (this.align === RIGHT) {
             this.x = this.permX - this.getWidth();
         }
-        this.gBuffer.resizeCanvas(this.getTextWidth(), this.getHeight() + 10)
+        this.gBuffer.resizeCanvas(this.getTextWidth(), this.getTextHeight())
         push()
         this.textWithShadow(this.text);
         pop()
@@ -969,6 +985,7 @@ class PlayerEnergyBar extends Button {
         this.greyDiamond = new ImageButton(manadiamondgrey.width, manadiamondgrey.height, 0, 0).setImage(manadiamondgrey.get(0, 0 , manadiamondgrey.width, manadiamondgrey.height)).updateGraphics().setShadow(true)
         this.circle = new ImageButton(manaorb.width, manaorb.height, 0, 0).setImage(manaorb.get(0, 0 , manaorb.width, manaorb.height)).updateGraphics().setShadow(true)
         this.maxEnergy = 6;
+        this.hitWidth = 500;
         this.toolTipBuffer = new TextButton(600, 400, 50, windowHeight * 0.2)
             .setTitle("Energy", 70)
             .setText("Spend energy to cast cards.<br><br>Capture a pawn: +1<br>Capture any other piece: +2<br><br>Maximum: " + this.maxEnergy)

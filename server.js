@@ -186,6 +186,7 @@ io.on('connection', (socket) => {
         }
         const roomCode = generateRoomCode6Digits();
         const game = new Game(roomCode);
+        game.solo = !!solo;
         
         console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length + 1))
         socket.join('game-' + roomCode);
@@ -269,6 +270,7 @@ function sendGameDataToRoom(roomCode) {
         players: game.getPlayers().map(player => player && { name: player.name, energy: player.energy }),
         board: game.getBoard(),
         state: game.getState(),
+        solo: game.solo,
         turn: game.getTurn(),
         lastMove: game.lastMove,
         lastMovedPiece: game.lastMovedPiece,

@@ -63,7 +63,7 @@
       name: "Summon Pawn",
       flash: [90, 255, 130],
       cost: 3,
-      image: PLACEHOLDER_ART,
+      image: "Assets/summoncard.png",
       description: "Places a new pawn on any empty<br>tile in your own half.<br><br>Cost: 3",
       tiles: (board, color) => tilesWhere(board, (piece, x, y) => !piece && ownHalf(y, color)),
       effect: (board, x, y, color) => board.setTileData(x, y, { piece: makePiece("pawn", color) })
@@ -73,7 +73,7 @@
       name: "Blink",
       flash: [120, 190, 255],
       cost: 4,
-      image: PLACEHOLDER_ART,
+      image: "Assets/blinkcard.png",
       description: "Teleports a friendly piece to an<br>empty tile up to 2 squares away.<br>Kings cannot blink.<br><br>Cost: 4",
       tiles: (board, color) => tilesWhere(board, piece => mine(piece, color) && piece.type !== "king"),
       originTiles: (board, color, origin) => tilesWhere(board, (piece, x, y) =>

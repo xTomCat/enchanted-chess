@@ -85,6 +85,11 @@ function setup() {
   guiRenderer = new GuiRenderer(windowWidth, windowHeight, cam)
   chessBoard = new Chessboard(8, 8, 20, whiteTexture, blackTexture).populateBoard()
   cardDataManager = new CardDataManager()
+  const invitedRoom = new URLSearchParams(location.search).get('room')
+  if (invitedRoom && /^[A-Za-z0-9]{1,12}$/.test(invitedRoom)) {
+    socket.emit('joinGame', invitedRoom, cardDataManager.deckAsServerData())
+    history.replaceState(null, '', location.pathname)
+  }
   rectMode(CENTER)
   gl = this._renderer.GL;
   gl.enable(gl.CULL_FACE);
@@ -142,6 +147,7 @@ function setup() {
   function returnToMenu() {
     room = null
     statusHoldUntil = 0
+    setStatus("Waiting for players...")
     timeUntilLeaving = null
     check = null
     setCancelHint("")
@@ -196,7 +202,11 @@ function setup() {
           opponent = null
           break;
       }
-      let roomCodeAsString = "Room code: " + gameData.roomCode.toString()
+      let roomCodeAsString = ""
+      if (!gameData.solo) {
+        roomCodeAsString = "Room code: " + gameData.roomCode.toString() +
+          (gameData.state === "started" ? "" : " - click to copy invite")
+      }
       if (roomCodeText.getText() !== roomCodeAsString) {
         roomCodeText.updateText(roomCodeAsString)
       }
@@ -316,6 +326,16 @@ function promptNickName() {
   const roomCode = gameData ? gameData.roomCode : null
   if (nickname) {
     socket.emit('nickname', nickname, roomCode)
+  }
+}
+
+function copyInviteLink() {
+  if (!gameData || gameData.solo) return
+  const link = location.origin + location.pathname + '?room=' + gameData.roomCode
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => setStatus('Invite link copied!', 3), () => setStatus(link, 15))
+  } else {
+    setStatus(link, 15)
   }
 }
 

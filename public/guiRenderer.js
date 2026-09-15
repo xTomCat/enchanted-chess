@@ -152,6 +152,7 @@ class GuiRenderer {
         .setText("00:00")
         .setAlign(CENTER)
         .setTextSize(50)
+        .onClick(copyInviteLink)
         .updateGraphics()
 
       this.ingameGuiElements.statusText = new TextButton(50, 50, 50, 100)
