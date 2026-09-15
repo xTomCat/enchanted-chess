@@ -49,31 +49,27 @@ class ChessPiece {
     }
   }
 
-  getAvailableMoves(chessBoardObject, x, y, check = false) {
+  getAvailableMoves(chessBoardObject, x, y) {
     let chessBoard = chessBoardObject.getBoard();
     let piece = chessBoard[x][y].piece;
 
-    // Use shared movement logic
     let moves = PieceMovement.getAvailableMoves(chessBoardObject, x, y, piece);
 
-    // Filter moves if in check
-    if (check && this.color === check) {
-      let newMoves = [];
-      for (let move of moves) {
-        let tempPiece = chessBoard[move.x][move.y].piece;
-        // Simulate the move
-        chessBoard[move.x][move.y].piece = piece;
-        chessBoard[x][y].piece = null;
-        // Check if still in check
-        if (!chessBoardObject.isInCheck(this.color)) {
-          newMoves.push(move);
-        }
-        // Revert
-        chessBoard[move.x][move.y].piece = tempPiece;
-        chessBoard[x][y].piece = piece;
+    // Get rid of moves that leave our king in check
+    let newMoves = [];
+    for (let move of moves) {
+      let tempPiece = chessBoard[move.x][move.y].piece;
+      // Simulate the move
+      chessBoard[move.x][move.y].piece = piece;
+      chessBoard[x][y].piece = null;
+      if (!chessBoardObject.isInCheck(this.color)) {
+        newMoves.push(move);
       }
-      moves = newMoves;
+      // Revert
+      chessBoard[move.x][move.y].piece = tempPiece;
+      chessBoard[x][y].piece = piece;
     }
+    moves = newMoves;
     return moves;
   }
 

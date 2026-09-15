@@ -162,7 +162,7 @@ class Chessboard {
         //if the piece exists and is not the same color as the king
         if (piece && piece.color != color) {
 
-          let moves = piece.getAvailableMoves(this, j, i);
+          let moves = PieceMovement.getAvailableMoves(this, j, i, piece);
           for (let i = 0; i < moves.length; i++) {
             if (moves[i].x == kingPos.x && moves[i].y == kingPos.y) {
               return true;
