@@ -27,6 +27,13 @@ class Chessboard {
       }
     }
 
+    // p5 treats a p5.Graphics texture as dirty every single frame and re-uploads the
+    // entire thing to the GPU. The atlas never changes after this, so we bake it into
+    // a p5.Image, which only uploads when its pixels actually change.
+    this.atlasImage = this.atlas.get()
+    this.atlas.remove()
+    this.atlas = null
+
     // Calculate tile world positions
     let offsetX = (this.chessBoard[0].length - 1) * (this.tileSize / 2) - (this.tileSize / 2);
     let offsetY = (this.chessBoard.length - 1) * (this.tileSize / 2) - (this.tileSize / 2);
@@ -272,7 +279,7 @@ class Chessboard {
     noStroke()
     let chessBoard = this.chessBoard;
     let tileSize = this.tileSize;
-    texture(this.atlas)
+    texture(this.atlasImage)
     model(this.geometry)
     //Get the hovered tile
     let hoveredTile = this.getSelectedTile(mouseX, mouseY)

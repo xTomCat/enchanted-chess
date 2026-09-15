@@ -305,9 +305,15 @@ class Button {
 
     }
 
+    setBufferDensity(density) {
+        this.gBuffer.pixelDensity(density)
+        return this
+    }
+
     setShadow(boolean) {
         if (boolean) {
             let shadow = createGraphics(this.width, this.height);
+            shadow.pixelDensity(this.gBuffer.pixelDensity());
             shadow.image(this.gBuffer, 0, 0);
             const ctx = shadow.drawingContext;
             ctx.globalCompositeOperation = "source-in";

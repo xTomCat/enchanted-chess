@@ -20,7 +20,9 @@ class ChessPiece {
         graphic.blendMode(SCREEN); graphic.noStroke(); graphic.fill(...DARK_PIECE_LIFT)
         graphic.rect(0, 0, res, res); graphic.blendMode(BLEND)
       }
-      ChessPiece.textures[color] = graphic
+      // Baked to a p5.Image to avoid uploading to the GPU every single frame.
+      ChessPiece.textures[color] = graphic.get()
+      graphic.remove()
     }
     return ChessPiece.textures[color]
   }

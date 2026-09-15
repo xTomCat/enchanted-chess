@@ -281,6 +281,8 @@ class CardObject {
         .setHoverEffect(0, -20, 0.5)
         .anchorToBottom(true)
         .setScale(0.25)
+        // Store hand cards at half density to benefit performance.
+        .setBufferDensity(CARD_HAND_SCALE * 2)
         .setToolTip(toolTipBuffer)
         .updateGraphics()
         .setShadow(true)
