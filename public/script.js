@@ -41,6 +41,12 @@ function setStatus(text, holdSeconds = 0) {
   }
   guiRenderer.ingameGuiElements.statusText.updateText(text)
 }
+
+function setCancelHint(text) {
+  if (!guiRenderer || !guiRenderer.ingameGuiElements.cancelHint) return
+  if (guiRenderer.ingameGuiElements.cancelHint.getText() === text) return
+  guiRenderer.ingameGuiElements.cancelHint.updateText(text)
+}
 const cardHeight = 435
 const cardWidth = 313
 
@@ -136,11 +142,14 @@ function setup() {
   })
   
 
-  socket.on('roomClosed', () => {
+  function returnToMenu() {
     room = null
-    chessBoard.clearBoard().populateBoard()
+    statusHoldUntil = 0
+    timeUntilLeaving = null
+    check = null
+    setCancelHint("")
+    if (chessBoard) chessBoard.clearBoard().populateBoard()
     color = "unset!"
-    console.log('Room closed')
     gameData = null
     cardDataManager.resetDeck()
     camAngle = null
@@ -149,6 +158,28 @@ function setup() {
     if (guiRenderer) {
       guiRenderer.setScreen("menu")
     }
+  }
+
+  socket.on('roomClosed', () => {
+    console.log('Room closed')
+    returnToMenu()
+  })
+
+  // The server forgets a game as soon as we drop, so a reconnect means the room
+  // we were in is gone. Bail out to the menu rather than sitting in a dead game
+  // where moves are silently ignored.
+  let hasConnectedBefore = false
+
+  socket.on('disconnect', () => {
+    setStatus('Connection lost - reconnecting...', 60)
+  })
+
+  socket.on('connect', () => {
+    if (hasConnectedBefore && gameData) {
+      console.log('Reconnected, but the previous game no longer exists')
+      returnToMenu()
+    }
+    hasConnectedBefore = true
   })
 
   socket.on('requestDeck', () => {
@@ -230,14 +261,21 @@ function setup() {
     camTarget = setColor === "black" ? PI : 0
   })
 
+  socket.on('closeCancelled', () => {
+    timeUntilLeaving = null
+    setCancelHint("")
+    console.log('Leaving cancelled')
+  })
+
   socket.on('leavingSoon', (count) => {
     timeUntilLeaving = count
     if (guiRenderer) {
       setStatus("Leaving in " + timeUntilLeaving + " seconds")
+      setCancelHint(gameData && gameData.result ? "" : "Click again to cancel")
     }
     if (timeUntilLeaving == 0) {
       timeUntilLeaving = null
-      setStatus("")
+      setStatus("Leaving...")
     }
   })
 }
@@ -267,11 +305,15 @@ function compareBoard(chessBoard, board) {
 }
 
 function closeRoom() {
-  if (gameData) {
-    socket.emit('closeRoom', gameData.roomCode)
-    chessBoard = null
-  } else {
+  if (!gameData) {
     console.log("No room to close")
+    return
+  }
+  if (gameData.state === "closing") {
+    if (gameData.result) return
+    socket.emit('cancelCloseRoom', gameData.roomCode)
+  } else {
+    socket.emit('closeRoom', gameData.roomCode)
   }
 }
 

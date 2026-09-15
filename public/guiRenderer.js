@@ -13,7 +13,8 @@ class GuiRenderer {
       this.guiScale = Math.min(this.width / baseWidth, this.height / baseHeight);
       this.menuButtonNames = ["singlePlayer", "createARoom", "joinARoom", "cardDeck", "options", "nickname"];
       this.ingameGuiElementNames = ["hamburgerMenu", "gameTime",
-        "opponentNamePlate", "playerNamePlate", "playerEnergyBar", "statusText"]
+        "opponentNamePlate", "playerNamePlate", "playerEnergyBar", "statusText",
+        "cancelHint"]
         //"playerNamePlate", "playerEnergy", 
         //"card1", "card2", "card3", "card4", 
         //"chatBox", "chatInput"]
@@ -143,6 +144,7 @@ class GuiRenderer {
       this.ingameGuiElements.hamburgerMenu = new ImageButton(50, 50, 50, 50)
         .setImage(hamburgericon)
         .setHoverEffect(0, -20, 0.5)
+        .onClick(closeRoom)
         .updateGraphics()
         .setShadow(true)
 
@@ -156,6 +158,12 @@ class GuiRenderer {
         .setText("Waiting for players...")
         .setAlign(CENTER)
         .setTextSize(50)
+        .updateGraphics()
+
+      this.ingameGuiElements.cancelHint = new TextButton(50, 50, 50, 160)
+        .setText("")
+        .setAlign(CENTER)
+        .setTextSize(30)
         .updateGraphics()
 
       this.ingameGuiElements.opponentNamePlate = new OpponentNamePlate(350, 150, -400, 50)

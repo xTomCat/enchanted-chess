@@ -246,6 +246,12 @@ io.on('connection', (socket) => {
             games[roomCode].close()
         };
     })
+
+    socket.on('cancelCloseRoom', (roomCode) => {
+        if (games[roomCode] && games[roomCode].players.find(p => p.socketId === socket.id)) {
+            games[roomCode].cancelClose()
+        };
+    })
 })
 
 function logConnectedPlayers() {
@@ -347,6 +353,8 @@ class Game {
     this.turn = "white";
     this.check = null
     this.result = null
+    this.closeToken = 0
+    this.stateBeforeClosing = null
     this.lastMove = null
     this.lastMovedPiece
     for (let i = 0; i < 8; i++) {
@@ -403,10 +411,24 @@ class Game {
         return null;
       }
     }
+    cancelClose() {
+      if (this.state !== "closing") return
+      if (this.result) return
+      this.closeToken++
+      this.state = this.stateBeforeClosing || "started"
+      this.stateBeforeClosing = null
+      console.log('Close cancelled for room: ' + this.roomCode)
+      io.to('game-' + this.roomCode).emit('closeCancelled')
+      sendGameDataToRoom(this.roomCode)
+    }
     async close() {
+      if (this.state === "closing") return
+      const token = ++this.closeToken
+      this.stateBeforeClosing = this.state
       this.state = "closing";
       sendGameDataToRoom(this.roomCode)
       for (let i = 0; i <= 5; i++) {
+        if (this.closeToken !== token) return
         if (this.players[0]) {
           io.to(this.players[0].socketId).emit('leavingSoon', 5-i);
         }
@@ -415,6 +437,7 @@ class Game {
         }
         await sleep(1000)
       }
+      if (this.closeToken !== token) return
       if (this.players[0]) {
         this.players[0].leaveRoom(this.roomCode)
       }

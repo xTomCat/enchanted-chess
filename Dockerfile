@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
-COPY server.js ./
+COPY server.js chessAI.js ./
 COPY public ./public
 
 EXPOSE 3000
