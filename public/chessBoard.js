@@ -266,6 +266,7 @@ class Chessboard {
         translate(this.height * this.tileSize / 2, 0, 0);
         rotateY(this.rotAngle);
         this.rotAngle += 0.002 * deltaTime * targetFrameRate;
+        this.rotAngle = ((this.rotAngle + PI) % TWO_PI + TWO_PI) % TWO_PI - PI;
       }
       } else if (guiRenderer.getState() == "game" && (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp) < 100) {
       let t = (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp)/100;
