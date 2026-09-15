@@ -104,7 +104,6 @@ function setup() {
   })
 
     socket.on('moveRejected', (data) => {
-    console.log('Move rejected:', data.reason)
     // Resync board state from server
     if (gameData) {
       compareBoard(chessBoard, gameData.board)
@@ -112,7 +111,6 @@ function setup() {
   })
 
   socket.on('nicknameChanged', (changedNickname) => {
-    console.log("Nickname changed to: " + changedNickname)
     nickname = changedNickname
     if (guiRenderer) {
       guiRenderer.setButtonText("nickname", nickname)
@@ -123,7 +121,6 @@ function setup() {
   socket.on('error', message => setStatus(message, 2))
 
   socket.on('receivePlayCard', (pColor, index, x, y, card, extra) => {
-    console.log(pColor + "is playing card with index: " + index)
     if (pColor == color) {
       cardDataManager.playCard(index, x, y, extra)
      } else {
@@ -161,7 +158,6 @@ function setup() {
   }
 
   socket.on('roomClosed', () => {
-    console.log('Room closed')
     returnToMenu()
   })
 
@@ -176,15 +172,9 @@ function setup() {
 
   socket.on('connect', () => {
     if (hasConnectedBefore && gameData) {
-      console.log('Reconnected, but the previous game no longer exists')
       returnToMenu()
     }
     hasConnectedBefore = true
-  })
-
-  socket.on('requestDeck', () => {
-    socket.emit('sendDeck', cardDataManager.playerDeck)
-    console.log("Server requested deck")
   })
 
   socket.on('gameData', (gameDataReceived) => { 
@@ -242,7 +232,6 @@ function setup() {
 
 
   socket.on('initBoard', (board) => {
-    console.log("init board received")
     chessBoard.clearBoard()
     for (let i = 0; i < board.length; i++) {
       for (let j = 0; j < board[i].length; j++) {
@@ -255,7 +244,6 @@ function setup() {
   })
 
   socket.on('setColor', (setColor) => {
-    console.log("Color set to: " + setColor)
     color = setColor
     camAngle = HALF_PI
     camTarget = setColor === "black" ? PI : 0
@@ -264,7 +252,6 @@ function setup() {
   socket.on('closeCancelled', () => {
     timeUntilLeaving = null
     setCancelHint("")
-    console.log('Leaving cancelled')
   })
 
   socket.on('leavingSoon', (count) => {
@@ -306,7 +293,6 @@ function compareBoard(chessBoard, board) {
 
 function closeRoom() {
   if (!gameData) {
-    console.log("No room to close")
     return
   }
   if (gameData.state === "closing") {
@@ -434,33 +420,8 @@ if (cardDataManager) {
 
 
 function keyPressed() {
-  if (key === 'c') {
-    let selectedTile = chessBoard.getSelectedTile(mouseX, mouseY, chessBoard)
-    if (selectedTile) {
-      console.log("Tile selected: (" + (selectedTile.x)+ "," + (selectedTile.y)+")")
-      chessBoardArray[selectedTile.x][selectedTile.y].selected = true
-      console.log(selectedTile)
-      if (chessBoardArray[selectedTile.x][selectedTile.y].piece) {
-        console.log(chessBoardArray[selectedTile.x][selectedTile.y].piece)
-      }
-      //playerTileSelected = [selectedTile.x, selectedTile.z]
-    }
-  }
-  if (key === 'e') {
-    console.log("X: " + cam.eyeX)
-    console.log("Y: " + cam.eyeY)
-    console.log("Z: " + cam.eyeZ)
-    console.log("FOV: " + cam.cameraFOV)
-  }
   if (key === "F2") {
-    if (debug) {
-      console.log("Debug: OFF!")
-      debug = false
-    } else {
-      console.log("Debug: ON!")
-      debug = true
-    }
-    
+    debug = !debug
   }
 
 

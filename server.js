@@ -17,6 +17,29 @@ const CAPTURE_ENERGY = { pawn: 1, default: 2 };
 
 let connectedPlayers = [];
 let games = {};
+const MAX_GAMES = 200;
+
+process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
+process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
+
+function findRoomCodeBySocket(socketId) {
+    return Object.keys(games).find(code => games[code].players.find(p => p.socketId === socketId));
+}
+
+function buildServerDeck(deckData) {
+    let parsed = deckData;
+    if (typeof parsed === 'string') {
+        try { parsed = JSON.parse(parsed) } catch { return null }
+    }
+    if (!Array.isArray(parsed) || parsed.length > 4) return null;
+    const deck = [];
+    for (let card of parsed) {
+        const existing = card && cardDataManager.cardData.find(c => c.id === card.id && c.name === card.name);
+        if (!existing) return null;
+        deck.push(new Card(existing.id, existing.name, existing.cost));
+    }
+    return deck;
+}
 
 // Input validation helper
 function validateMoveFormat(move) {
@@ -115,33 +138,12 @@ io.on('connection', (socket) => {
       }
     });
 
-    socket.on('recieveDeck', (deck) => {
-      const player = connectedPlayers.find(p => p.socketId === socket.id)
-      let serverSideDeck = []
-      if (deck.length !== 4) {
-        console.log("Player " + player.name + " tried to set an invalid deck!")
-        return
-      }
-      for (card of deck) {
-        if (!cardDataManager.cardExists(card)) {
-          console.log("Player " + player.name + " tried to set an invalid deck!")
-          return
-        }
-        let existingCard = cardDataManager.cardData.find(c => c.id === card.id);
-        let serverSideCard = new Card(existingCard.id, existingCard.name, existingCard.cost)
-          serverSideDeck.push(serverSideCard)
-        }
-      if (player) {
-        player.setDeck(serverSideDeck)
-      }
-    })
-
     socket.on('disconnect', () => {
       if (Object.keys(games).length === 0) {
         console.log("No games found!")
         return
       }
-      const roomCode = Object.keys(games).find(roomCode => games[roomCode].players.find(p => p.socketId === socket.id));
+      const roomCode = findRoomCodeBySocket(socket.id);
       console.log('Client disconnected with ID: ' + socket.id);
       connectedPlayers = connectedPlayers.filter(p => p.socketId !== socket.id);
       logConnectedPlayers();
@@ -173,19 +175,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('createRoom', (deckData, solo) => {
-        const roomCode = generateRoomCode6Digits();
-        const parsedDeck = JSON.parse(deckData)
-        let serverSideDeck = [];
-        for (let card of parsedDeck) {
-          if (!cardDataManager.cardExists(card.name)) {
-            console.log("Player " + player.name + " tried to set an invalid deck!");
-            return;
-          }
-          let existingCard = cardDataManager.cardData.find(c => c.id === card.id);
-          let serverSideCard = new Card(existingCard.id, existingCard.name, existingCard.cost)
-            serverSideDeck.push(serverSideCard)
+        const serverSideDeck = buildServerDeck(deckData);
+        if (!serverSideDeck) {
+          console.log("Player " + player.name + " tried to set an invalid deck!");
+          return;
         }
-        //const player = connectedPlayers.find(p => p.socketId === socket.id)
+        if (Object.keys(games).length >= MAX_GAMES || findRoomCodeBySocket(socket.id)) {
+          io.to(socket.id).emit('error', 'Could not create a room right now!');
+          return;
+        }
+        const roomCode = generateRoomCode6Digits();
         const game = new Game(roomCode);
         
         console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length + 1))
@@ -212,17 +211,8 @@ io.on('connection', (socket) => {
 
     socket.on('joinGame', (roomCode, deckData) => {
         const player = connectedPlayers.find(p => p.socketId === socket.id)
-        const parsedDeck = JSON.parse(deckData)
-        let serverSideDeck = [];
-        for (let card of parsedDeck) {
-          if (!cardDataManager.cardExists(card.name)) {
-            console.log("Player " + player.name + " tried to set an invalid deck!");
-            return;
-          }
-          let existingCard = cardDataManager.cardData.find(c => c.id === card.id);
-          let serverSideCard = new Card(existingCard.id, existingCard.name, existingCard.cost)
-            serverSideDeck.push(serverSideCard)
-        }
+        const serverSideDeck = buildServerDeck(deckData);
+        if (!player || !serverSideDeck) return;
         const game = games[roomCode];
         if (game && game.players.length < 2) {
           player.setDeck(serverSideDeck);

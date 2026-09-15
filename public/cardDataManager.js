@@ -42,7 +42,6 @@ class CardDataManager {
 
     addCardToDeck(cardName) {
         let card = new CardObject(this.cardData.find(card => card.name === cardName), this.playerDeck.length);
-        console.log("Adding new card with index " + card.index);
         if (card) {
           this.playerDeck.push(card);
           this.updateCardPositions()
@@ -102,7 +101,6 @@ class CardDataManager {
         console.error("No card selected.");
         return;
       }
-      console.log("Playing card with name " + selectedCard.name);
       this.flyCard(selectedCard, selectedCard.iconBuffer.screenCenter(guiRenderer.guiScale), x, y, extra);
       this.activateCardEffect(selectedCard, x, y);
     }
