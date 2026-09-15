@@ -269,17 +269,8 @@ function sendGameDataToRoom(roomCode) {
     if (!game) {
         return;
     }
-    const players = game.getPlayers();
-    whiteDeck = []
-    blackDeck = []
-    if (players[0]) {
-      whiteDeck = players[0].deck
-    } 
-    if (players[1]) {
-      blackDeck = players[1].deck
-    }
     let gameData = {
-        players: players,
+        players: game.getPlayers().map(player => player && { name: player.name, energy: player.energy }),
         board: game.getBoard(),
         state: game.getState(),
         turn: game.getTurn(),
@@ -287,11 +278,7 @@ function sendGameDataToRoom(roomCode) {
         lastMovedPiece: game.lastMovedPiece,
         check: game.check,
         result: game.result,
-        roomCode: roomCode,
-        decks: {
-          white: whiteDeck,
-          black: blackDeck
-        }
+        roomCode: roomCode
 }
 io.to('game-' + roomCode).emit('gameData', gameData);
 }

@@ -285,13 +285,20 @@ class GuiRenderer {
 
     renderResultOverlay() {
       if (!gameData || !gameData.result) {
+        this.resultAt = 0
         return
       }
+      if (!this.resultAt) this.resultAt = totalTime
+      const ease = eased((totalTime - this.resultAt) / 0.45)
 
       const headline = this.getResultHeadline(gameData.result.type)
       const outcome = this.getResultOutcome(gameData.result.winner)
 
       canvas2d.push()
+      canvas2d.drawingContext.globalAlpha = ease
+      canvas2d.translate(this.width * 0.5, this.height * 0.44)
+      canvas2d.scale(0.85 + 0.15 * ease)
+      canvas2d.translate(-this.width * 0.5, -this.height * 0.44)
       canvas2d.noStroke()
       canvas2d.rectMode(CORNER)
       canvas2d.fill(0, 170)
@@ -314,6 +321,7 @@ class GuiRenderer {
 
       if (cardDataManager) {
         cardDataManager.displayDeck()
+        cardDataManager.drawFlight()
       }
 
       for (let i = 0; i < this.ingameGuiElementNames.length; i++) {

@@ -1,3 +1,4 @@
+const DARK_PIECE_LIFT = [38, 38, 48]
 class ChessPiece {
   constructor(type, color) {
     this.color = color
@@ -15,6 +16,10 @@ class ChessPiece {
       const res = 100, src = color === "black" ? blackTexture : whiteTexture
       const graphic = createGraphics(res, res)
       graphic.image(src, 0, 0, res, res, random(src.width - res), random(src.height - res), res, res)
+      if (color === "black") {
+        graphic.blendMode(SCREEN); graphic.noStroke(); graphic.fill(...DARK_PIECE_LIFT)
+        graphic.rect(0, 0, res, res); graphic.blendMode(BLEND)
+      }
       ChessPiece.textures[color] = graphic
     }
     return ChessPiece.textures[color]

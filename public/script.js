@@ -28,6 +28,7 @@ let totalTimeFloor = 0
 let targetFrameRate = 60
 let selectedThisClick = false
 let cardImages = {}
+let camAngle = null, camTarget = 0
 let statusHoldUntil = 0
 let baseStatus = ""
 
@@ -116,12 +117,12 @@ function setup() {
   socket.on('error', message => setStatus(message, 2))
 
   socket.on('receivePlayCard', (pColor, index, x, y, card, extra) => {
-    cardDataManager.flashCardEffect(card, x, y, extra)
     console.log(pColor + "is playing card with index: " + index)
     if (pColor == color) {
-      
-      cardDataManager.playCard(index, x, y)
+      cardDataManager.playCard(index, x, y, extra)
      } else {
+       const plate = guiRenderer.ingameGuiElements.opponentNamePlate
+       cardDataManager.flyCard(card, plate.screenCenter(guiRenderer.guiScale), x, y, extra)
        cardDataManager.activateCardEffect(card, x, y, true)
      }
   })
@@ -142,6 +143,9 @@ function setup() {
     console.log('Room closed')
     gameData = null
     cardDataManager.resetDeck()
+    camAngle = null
+    cam.eyeZ = Math.hypot(cam.eyeX, cam.eyeZ)
+    cam.eyeX = 0
     if (guiRenderer) {
       guiRenderer.setScreen("menu")
     }
@@ -222,6 +226,8 @@ function setup() {
   socket.on('setColor', (setColor) => {
     console.log("Color set to: " + setColor)
     color = setColor
+    camAngle = HALF_PI
+    camTarget = setColor === "black" ? PI : 0
   })
 
   socket.on('leavingSoon', (count) => {
@@ -311,6 +317,8 @@ function easeOutQuad (t, b, c, d) {
   return -c * (t /= d) * (t - 2) + b;
 }
 
+const eased = t => easeOutQuad(constrain(t, 0, 1), 0, 1, 1)
+
 
 function draw() {
   currentFrameTime = performance.now()
@@ -324,9 +332,17 @@ function draw() {
   if (frameCount % targetFrameRate == 0) {
     fps = round(frameRate())
   }
+  if (camAngle !== null && guiRenderer.getState() == "game") {
+    camAngle += (camTarget - camAngle) * min(1, deltaTime * 4)
+    const r = Math.hypot(cam.eyeX, cam.eyeZ)
+    cam.eyeX = r * cos(camAngle)
+    cam.eyeZ = r * sin(camAngle)
+    if (abs(camTarget - camAngle) < 0.002) camAngle = null
+  }
   cam.lookAt(0,0,0)
-  ambientLight(128, 128, 128);
-  directionalLight(128, 128, 128, 0, 1, 0);
+  ambientLight(62, 62, 72);
+  directionalLight(255, 246, 228, -0.35, 0.9, -0.25);
+  directionalLight(96, 116, 150, 0.45, -0.5, 0.6);
   lightFalloff(1, 0, 0)
   noStroke()
 

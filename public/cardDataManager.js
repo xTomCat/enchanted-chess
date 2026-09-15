@@ -1,11 +1,18 @@
-const CARD_PLAY_FRAMES = 25
+const CARD_HAND_SCALE = 0.25
+const CARD_FLIGHT = {
+  seconds: 0.55,
+  scaleStart: 1,
+  scaleEnd: 0.35,
+  arc: 0.3,
+  bank: 1,
+}
 const CARD_LAYOUT_FRAMES = 15
 
 class CardDataManager {
     constructor() {
         this.cardData = []
         this.playerDeck = []; //The basic card datas will be pushed into here, and detailed objects are displayed based on these.
-        this.playingAniamtion = [];
+        this.flights = [];
         this.pendingOrigin = null;
         this.init();
     }
@@ -89,20 +96,15 @@ class CardDataManager {
       return null;
     }
 
-    playCard(index, x, y) { //board indices
+    playCard(index, x, y, extra) { //board indices
       let selectedCard = this.playerDeck[index];
       if (!selectedCard) {
         console.error("No card selected.");
         return;
       }
       console.log("Playing card with name " + selectedCard.name);
-      let targX = mouseX/(guiRenderer.guiScale) // Distance from left of the screen
-      let targY = mouseY/(guiRenderer.guiScale/2)
-      if (selectedCard.iconBuffer.anchorBottom) {
-        targY = (targY - ((guiRenderer.height/2)) - ((selectedCard.iconBuffer.gBuffer.height/guiRenderer.guiScale)/2))
-      }
-      selectedCard.iconBuffer.setFadeOut(true, 30)
-      selectedCard.iconBuffer.animateTo(targX, targY, CARD_PLAY_FRAMES, () => this.activateCardEffect(selectedCard, x, y));
+      this.flyCard(selectedCard, selectedCard.iconBuffer.screenCenter(guiRenderer.guiScale), x, y, extra);
+      this.activateCardEffect(selectedCard, x, y);
     }
 
     requestPlayCard(x, y) {
@@ -138,6 +140,47 @@ class CardDataManager {
     clearPendingPlay() {
       this.pendingOrigin = null;
       guiRenderer.closeCardChoice();
+    }
+
+    flyCard(card, from, x, y, extra) {
+      const image = cardImages[card.name]
+      this.flights.push({ image, card, from, x, y, extra, start: totalTime,
+        w: image.width * CARD_HAND_SCALE, h: image.height * CARD_HAND_SCALE,
+        arc: CARD_FLIGHT.arc * (random() < 0.5 ? -1 : 1) })
+    }
+
+    drawFlight() {
+      for (let i = this.flights.length - 1; i >= 0; i--) {
+        const flight = this.flights[i]
+        const t = (totalTime - flight.start) / CARD_FLIGHT.seconds
+        if (t >= 1) {
+          this.flights.splice(i, 1)
+          this.flashCardEffect(flight.card, flight.x, flight.y, flight.extra)
+          continue
+        }
+        const to = chessBoard.tileToScreen(flight.x, flight.y)
+        const span = Math.hypot(to.x - flight.from.x, to.y - flight.from.y) || 1
+        let nx = (to.y - flight.from.y) / span, ny = -(to.x - flight.from.x) / span
+        if (ny > 0) { nx = -nx; ny = -ny } // bulge away from the chord
+        const lift = span * flight.arc
+        const at = u => {
+          const travel = u * u * (3 - 2 * u), bulge = sin(u * PI) * lift
+          return { x: lerp(flight.from.x, to.x, travel) + nx * bulge,
+            y: lerp(flight.from.y, to.y, travel) + ny * bulge }
+        }
+        const here = at(t), back = at(max(t - 0.03, 0)), ahead = at(min(t + 0.03, 1))
+        const heading = atan2(ahead.x - back.x, back.y - ahead.y) // rotate in the direction of the angle on point of arc
+        const size = lerp(CARD_FLIGHT.scaleStart, CARD_FLIGHT.scaleEnd, t * t * (3 - 2 * t))
+        canvas2d.push()
+        canvas2d.noTint()
+        canvas2d.imageMode(CENTER)
+        canvas2d.drawingContext.globalAlpha = 1 - constrain((t - 0.85) * 6.7, 0, 1)
+        canvas2d.translate(here.x, here.y)
+        canvas2d.rotate(heading * CARD_FLIGHT.bank)
+        canvas2d.scale(size * guiRenderer.guiScale)
+        canvas2d.image(flight.image, 0, 0, flight.w, flight.h)
+        canvas2d.pop()
+      }
     }
 
     flashCardEffect(card, x, y, extra) {
@@ -179,9 +222,11 @@ class CardDataManager {
 
     displayDeck() {
       
+        const energy = guiRenderer.ingameGuiElements.playerEnergyBar.getEnergy()
         for (let i = 0; i < this.playerDeck.length; i++) {
           canvas2d.push();
           let card = this.playerDeck[i];
+          card.iconBuffer.dimmed = card.cost > energy;
           //console.log("Trying to draw card with name " + card.name + " at x: " + card.iconBuffer.x + " y: " + card.iconBuffer.y)
           //canvas2d.ellipse(card.x, card.y, 50, 50);
           card.iconBuffer.drawIcon(canvas2d, guiRenderer.guiScale);

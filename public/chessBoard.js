@@ -1,5 +1,6 @@
-const FLASH_SECONDS = 0.45
+const FLASH_SECONDS = 0.45, MOVE_SECONDS = 0.28
 const PICK_MAT = mat4.create(), PICK_NEAR = vec3.create(), PICK_FAR = vec3.create(), PICK_DIR = vec3.create()
+const PROJ_MAT = mat4.create(), PROJ_PT = vec3.create()
 
 class Chessboard {
   constructor(width, height, tileSize, whiteTexture, blackTexture) {
@@ -114,11 +115,11 @@ class Chessboard {
     return this
   }
   move(move) {
-    let from = move.from;
-    let to = move.to;
-    let piece = this.getTileData(from.x, from.y).piece;
-    this.setTileData(to.x, to.y, { piece: piece });
-    this.setTileData(from.x, from.y, { piece: null });
+    const from = this.getTileData(move.from.x, move.from.y), to = this.getTileData(move.to.x, move.to.y)
+    if (!from.piece) return
+    this.anim = { x: move.to.x, y: move.to.y, from, taken: to.piece, start: totalTime }
+    this.setTileData(move.to.x, move.to.y, { piece: from.piece });
+    this.setTileData(move.from.x, move.from.y, { piece: null });
   }
 
 
@@ -203,13 +204,20 @@ class Chessboard {
     return worldToBoardIndices(PICK_NEAR[0] + PICK_DIR[0] * t, PICK_NEAR[2] + PICK_DIR[2] * t, this);
   }
 
+  tileToScreen(x, y) {
+    const tile = this.getTileData(x, y)
+    vec3.transformMat4(PROJ_PT, [tile.x, tile.y, tile.z], PROJ_MAT)
+    return { x: (PROJ_PT[0] * 0.5 + 0.5) * _renderer.width, y: (0.5 - PROJ_PT[1] * 0.5) * _renderer.height }
+  }
+
   tileHighlight(tile) {
     if (tile.flash > totalTime) {
       const fade = (tile.flash - totalTime) / FLASH_SECONDS, c = tile.flashColor
       return [c[0] * fade, c[1] * fade, c[2] * fade]
     }
-    if (tile.hovered) return [255, 255, 255]
+    if (tile.hovered) return [130, 130, 130]
     if (tile.selected) return [0, 255, 0]
+    if (tile.piece && tile.piece.type == "king" && tile.piece.color == check) return [150 + sin(totalTime * 7) * 70, 0, 0]
     if (tile.available) return [255, 95, 31]
     return null
   }
@@ -268,28 +276,50 @@ class Chessboard {
     model(this.geometry)
     //Get the hovered tile
     let hoveredTile = this.getSelectedTile(mouseX, mouseY)
+    mat4.multiply(PROJ_MAT, _renderer.uPMatrix.mat4, _renderer.uMVMatrix.mat4)
+    const anim = this.anim, at = anim ? min((totalTime - anim.start) / MOVE_SECONDS, 1) : 0
+    if (at >= 1) this.anim = null
     for (let i = 0; i < this.width; i++) {
       for (let j = 0; j < this.height; j++) {
         let tile = chessBoard[i][j];
         tile.hovered = !!hoveredTile && i == hoveredTile.x && j == hoveredTile.y;
         let highlight = this.tileHighlight(tile);
         if (!tile.piece && !highlight) continue;
-        push();
-        translate(tile.x, tile.y, tile.z);
-        rotateX(PI/2)
+        const moving = anim && anim.x == i && anim.y == j;
+        if (moving && anim.taken) {
+          push(); translate(tile.x, at * 26, tile.z); rotateX(PI/2); rotateZ(PI/2 + at * 2)
+          anim.taken.drawModel(); pop()
+        }
         if (tile.piece) {
-          push()
+          push();
+          if (moving) {
+            const back = 1 - eased(at)
+            translate(tile.x + (anim.from.x - tile.x) * back,
+              tile.y - sin(at * PI) * (tile.piece.type == "knight" ? 14 : 4),
+              tile.z + (anim.from.z - tile.z) * back)
+          } else translate(tile.x, tile.y, tile.z);
+          rotateX(PI/2)
           rotateZ(PI/2)
+          if (tile.selected) translate(0, 0, 3 + sin(totalTime * 6))
           tile.piece.drawModel()
-          pop()
+          pop();
         }
         if (highlight) {
+          push();
+          translate(tile.x, tile.y, tile.z);
+          rotateX(PI/2)
           fill(highlight[0], highlight[1], highlight[2]) //also clears the atlas texture binding
           emissiveMaterial(highlight[0], highlight[1], highlight[2])
           translate(0, 0, 0.25)
-          square(0, 0, tileSize)
+          if (tile.available) {
+            gl.disable(gl.CULL_FACE)
+            scale(eased((totalTime - tile.availableAt) / 0.18))
+            if (tile.piece) torus(tileSize * 0.44, tileSize * 0.05)
+            else circle(0, 0, tileSize * 0.34)
+            gl.enable(gl.CULL_FACE)
+          } else square(0, 0, tileSize)
+          pop();
         }
-        pop();
       }
     }
     pop()
@@ -378,7 +408,7 @@ class Chessboard {
     let chessBoard = this.chessBoard;
       //loop through the moves array, setting the tiles at their coordinates to available
       for (let i = 0; i < moves.length; i++) {
-        chessBoard[moves[i].x][moves[i].y].available = true;
+        Object.assign(chessBoard[moves[i].x][moves[i].y], { available: true, availableAt: totalTime + i * 0.015 });
       }
   }
 }

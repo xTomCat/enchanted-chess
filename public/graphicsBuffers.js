@@ -33,6 +33,9 @@ class Button {
         this.isToolTip = false
         this.hoverOverride = false
         this.isSelected = false
+        this.dimmed = false
+        this.selectScale = 0
+        this.shown = 0
         this.isSelectable = false
         this.targetX = x
         this.targetY = y
@@ -45,6 +48,8 @@ class Button {
     }
 
     animateTo(x, y, frames, callback = null) {
+        this.startX = this.x;
+        this.startY = this.y;
         this.targetX = x;
         this.targetY = y;
         this.animFrames = frames;
@@ -59,9 +64,9 @@ class Button {
         this.x = this.targetX;
         this.y = this.targetY;
         this.animFrames = 0;
-        if (this.animCallback) {
-            this.animCallback()
-        }
+        const callback = this.animCallback;
+        this.animCallback = null;
+        if (callback) callback()
         return this;
     }
 
@@ -107,6 +112,27 @@ class Button {
         this.fadeOut = boolean
         this.fadeSpeed = fadeSpeed
         return this
+    }
+
+    update(energy) {
+        this.energy = energy;
+        clearTimeout(this.energyTimer)
+        const step = () => {
+            this.shown += Math.sign(this.energy - this.shown)
+            if (this.energyNum) this.energyNum.updateText(this.shown.toString())
+            this.initIcon(true)
+            if (this.shown !== this.energy) this.energyTimer = setTimeout(step, 70)
+        }
+        step()
+    }
+
+    screenCenter(guiScale) {
+        let x = this.x * guiScale, y = this.y * guiScale
+        if (this.align == RIGHT) x = windowWidth + x
+        else if (this.align == CENTER) x = (windowWidth + 15) / 2
+        if (this.anchorBottom) y = windowHeight - (this.gBuffer.height - this.y) * guiScale
+        return { x: x + this.gBuffer.width * guiScale * this.scale / 2,
+                 y: y + this.gBuffer.height * guiScale * this.scale / 2 }
     }
 
     setPosition(x, y) {
@@ -414,18 +440,11 @@ class Button {
         const downOffSet = -3 * guiScale
 
         if (this.animFrames !== 0) {
-            this.animProg += 1;
-            let t = this.animProg / this.animFrames;
-
-            let newX = lerp(this.x, this.targetX, t);
-            let newY = lerp(this.y, this.targetY, t);
-            this.x = newX;
-            this.y = newY;
-            if (Math.round(this.x) == Math.round(this.targetX) && Math.round(this.y) == Math.round(this.targetY)) {
-                this.x = this.targetX
-                this.y = this.targetY
-                this.completeAnimation();
-            }
+            this.animProg += deltaTime * targetFrameRate;
+            const ease = eased(this.animProg / this.animFrames);
+            this.x = lerp(this.startX, this.targetX, ease);
+            this.y = lerp(this.startY, this.targetY, ease);
+            if (ease >= 1) this.completeAnimation();
         }
 
 
@@ -464,7 +483,7 @@ class Button {
             canvas.tint(255, alpha);
         } else {
             this.fadeStartTime = null;
-            canvas.noTint();
+            if (this.dimmed) canvas.tint(180, 180, 195, 210); else canvas.noTint();
         }
 
         if (this.components.length > 0) {
@@ -537,8 +556,10 @@ class Button {
             this.scaledY = buttonY + downOffSet
         }
         canvas.push()
-        let scale = this.scale
-        canvas.scale(scale * guiScale)
+        this.selectScale = lerp(this.selectScale, this.isSelected ? this.selectedExtraScale : 0, min(1, deltaTime * 12))
+        canvas.translate(-this.gBuffer.width * this.scale * guiScale * this.selectScale / 2,
+                         -this.gBuffer.height * this.scale * guiScale * this.selectScale / 2)
+        canvas.scale(this.scale * (1 + this.selectScale) * guiScale)
         if (this.rotation) {
             canvas.translate(this.gBuffer.width/2, this.gBuffer.height/2)
             canvas.rotate(this.rotation + rotationOffset)
@@ -883,11 +904,6 @@ class OpponentNamePlate extends Button {
         return this.text.getText();
     }
 
-    update(energy) {
-        this.energy = energy;
-        this.initIcon(true)
-    }
-
     initIcon(update) {
         let personIcon = this.personIcon.getGraphicsObject()
         let personIconShadow = this.personIcon.getShadow()
@@ -921,7 +937,7 @@ class OpponentNamePlate extends Button {
             this.gBuffer.translate(i*diamond.width, 0)
             //this.gBuffer.rect(0, 0, diamond.width, diamond.height)
             this.gBuffer.image(diamondShadow, 15, 15, diamond.width, diamond.height)
-            this.gBuffer.image(i < this.energy ? diamond : greyDiamond, 0, 0, diamond.width, diamond.height)
+            this.gBuffer.image(i < this.shown ? diamond : greyDiamond, 0, 0, diamond.width, diamond.height)
             this.gBuffer.pop()
         }
         this.gBuffer.pop()
@@ -963,12 +979,6 @@ class PlayerEnergyBar extends Button {
         this.initIcon();
     }
 
-    update(energy) {
-        this.energy = energy;
-        this.energyNum.updateText(this.energy.toString())
-        this.initIcon(true)
-    }
-
     getEnergy() {
         return this.energy;
     }
@@ -999,7 +1009,7 @@ class PlayerEnergyBar extends Button {
         this.gBuffer.image(text, this.height + (this.diamond.width*0.1) - 5, this.diamond.height/8, text.width, text.height)
         this.gBuffer.push()
         this.gBuffer.translate(this.height + 5, this.height*0.62)
-        for (let i = 0; i < this.energy; i++) {
+        for (let i = 0; i < this.shown; i++) {
             this.gBuffer.push()
             this.gBuffer.scale(0.3)
             this.gBuffer.translate(i*diamond.width*0.9, 0)
@@ -1008,7 +1018,7 @@ class PlayerEnergyBar extends Button {
             this.gBuffer.image(diamond, -10, -10, diamond.width, diamond.height)
             this.gBuffer.pop()
         }
-        for (let i = this.energy; i < this.maxEnergy; i++) {
+        for (let i = this.shown; i < this.maxEnergy; i++) {
             this.gBuffer.push()
             this.gBuffer.scale(0.3)
             this.gBuffer.translate(i*diamond.width*0.9, 0)
