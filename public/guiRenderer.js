@@ -1,4 +1,30 @@
 
+const OVERLAY_SECONDS = 0.9
+// Biggest a card is allowed to get.
+const CARD_GALLERY_SCALE = 0.45
+const CARD_GALLERY_GAP = 55
+const GALLERY_TOP = 210, GALLERY_BOTTOM = 950, CARD_LABELS = 110
+const OVERLAY_MARGIN = 110
+// Shown in the blurb line when no card is hovered.
+const CARD_BLURB_HINT = "Hover a card to read what it does"
+const OPTION_SPACING = 72
+const OFF_ON = { values: [false, true], labels: ["Off", "On"] }
+const SWATCH_SIZE = 76
+// x, y, isDark for each quarter. Same crop on every swatch, so only the colour changes.
+const SWATCH_CROPS = [[300, 0, true], [130, 40, false], [40, 130, false], [400, 300, true]]
+// Where the board sits behind each overlay: x, y, z, tilt.
+const OVERLAY_BOARD = { cards: [-80, 120, 0, 0.4], options: [40, 40, -40, 0.3] }
+// label, Settings key, choices, tooltip
+const OPTION_LIST = [
+  ["Fullscreen", "fullscreen", OFF_ON, "Toggle fullscreen. Press ESC to close."],
+  ["Show FPS", "showFps", OFF_ON, "Toggle the frame rate in the bottom corner."],
+  ["Invert camera drag", "invertCamera", OFF_ON, "Flip which way the board turns as you drag."],
+  ["Reduce motion", "reduceMotion", OFF_ON, "Stop the menu bouncing and the board spinning."],
+  ["Move hints", "moveHints", OFF_ON, "Light up where a selected piece may legally go."],
+  ["Camera speed", "cameraSpeed", { values: [0.5, 1, 2], labels: ["Low", "Medium", "High"] },
+    "How far the board turns for the same drag."]
+]
+
 class GuiRenderer {
     constructor(width, height, cam) {
       this.width = width
@@ -51,6 +77,7 @@ class GuiRenderer {
           .setText("Card Deck")
           .setTextSize(50)
           .setAlign(LEFT)
+          .onClick(() => this.openOverlay("cards"))
           .updateGraphics()
       this.menuButtons.options =
         new TextButton(330, 50, 50, 900)
@@ -58,6 +85,7 @@ class GuiRenderer {
           .setText("Options")
           .setTextSize(50)
           .setAlign(LEFT)
+          .onClick(() => this.openOverlay("options"))
           .updateGraphics()
       this.menuButtons.nickname = 
         new TextButton(330, 50, -50, 40)
@@ -77,6 +105,29 @@ class GuiRenderer {
           .updateGraphics()
           .setShadow(true)
       this.menuButtons.nickname.addComponent(this.menuButtons.personIcon)
+
+      this.overlay = null
+      this.overlayAt = 0
+      this.overlayFrom = 0
+      this.overlayShut = false
+      this.overlays = {}
+      this.overlayBack =
+        new TextButton(200, 50, 50, 40)
+          .setHoverEffect(20, 0, 0.5)
+          .setText("Back")
+          .setTextSize(50)
+          .setAlign(LEFT)
+          .onClick(() => this.closeOverlay())
+          .updateGraphics()
+      this.fpsReadout = new TextButton(200, 40, -50, -30)
+        .setText("0 FPS")
+        .setTextSize(32)
+        .setAlign(RIGHT)
+        .setColor(178, 196, 230)
+        .anchorToBottom(true)
+        .updateGraphics()
+      this.registerOverlay("cards", "Your Cards", this.buildCardGallery())
+      this.registerOverlay("options", "Options", this.buildOptions())
 
 
       
@@ -206,11 +257,212 @@ class GuiRenderer {
       this.currentScreen.pop()
     }
 
+    // A label you cannot click.
+    label(text, size, { colour, align = LEFT, fade, y = 0 } = {}) {
+      const button = new TextButton(400, size + 10, 0, y).setText(text).setTextSize(size).setAlign(align)
+      if (colour) button.setColor(...colour)
+      if (fade) button.setFadeIn(true, 6)
+      return button.updateGraphics()
+    }
+
+    // An overlay screen: heading plus everything on it.
+    registerOverlay(name, title, elements = []) {
+      const heading = this.label(title, 80, { align: CENTER, y: 150 })
+      this.overlays[name] = { title: heading, elements: elements }
+      return this.overlays[name]
+    }
+
+    // One settings row; clicking moves to the next value.
+    settingButton(label, key, choices, help) {
+      const button = new TextButton(700, 60, 0, 0)
+        .setTextSize(44)
+        .setAlign(LEFT)
+        .setHoverEffect(20, 0, 0.5)
+      button.setToolTip(this.label(help, 30, { colour: [198, 212, 238], fade: true }))
+      const show = () => button.updateText(label + ":  " + choices.labels[Math.max(0, choices.values.indexOf(Settings[key]))])
+      button.onClick(() => {
+        Settings.set(key, choices.values[(choices.values.indexOf(Settings[key]) + 1) % choices.values.length])
+        show()
+      })
+      show()
+      return button
+    }
+
+    // Previews cut from the real textures.
+    buildFlavourSwatches() {
+      const half = SWATCH_SIZE / 2
+      return BOARD_FLAVOURS.map((flavour, index) => {
+        const preview = createGraphics(SWATCH_SIZE, SWATCH_SIZE)
+        preview.pixelDensity(1)
+        const quadrants = wanted => SWATCH_CROPS.forEach(([sx, sy, dark], i) => {
+          if (dark !== wanted) return
+          preview.image(dark ? blackTexture : whiteTexture,
+            (i % 2) * half, Math.floor(i / 2) * half, half, half, sx, sy, 160, 160)
+        })
+        quadrants(true); paintFlavour(preview, flavour); quadrants(false)
+        preview.noFill(); preview.strokeWeight(6)
+        preview.stroke(...(flavour.ramp ? flavour.ramp[1] : [255, 255, 255]))
+        preview.rect(3, 3, SWATCH_SIZE - 6, SWATCH_SIZE - 6)
+        const button = new ImageButton(SWATCH_SIZE, SWATCH_SIZE, 0, 0)
+          .setImage(preview)
+          .setHoverEffect(0, -10, 0.5)
+          .onClick(() => {
+            Settings.set("boardFlavour", index)
+            chessBoard.setFlavour(flavour)
+            this.flavourSwatches.forEach((swatch, i) => swatch.setSelected(i === index))
+            this.showFlavourName()
+          })
+          .updateGraphics()
+          .setShadow(true)
+        button.setToolTipWhileSelected(false)
+        button.setToolTip(this.label(flavour.name, 34, { colour: [198, 212, 238], fade: true }))
+        button.setSelected(index === Settings.boardFlavour)
+        return button
+      })
+    }
+
+    showFlavourName() {
+      this.boardLabel.updateText("Board flavour:  " + BOARD_FLAVOURS[Settings.boardFlavour].name)
+    }
+
+    // The positions never change, so this does not re-run when the window resizes.
+    buildOptions() {
+      this.flavourSwatches = this.buildFlavourSwatches()
+      this.boardLabel = this.label("", 44)
+      this.showFlavourName()
+      this.options = OPTION_LIST.map(option => this.settingButton(...option))
+      this.controlsHint = new TextButton(700, 260, 0, 0)
+        .setTitle("Controls", 44)
+        .setText("Drag to orbit, scroll to zoom<br>" +
+                 "Click a piece, then a highlighted tile<br>" +
+                 "Click a card, then a target tile<br>" +
+                 "Escape closes this screen")
+        .setTextSize(32)
+        .setAlign(LEFT)
+        .updateGraphics()
+      const x = OVERLAY_MARGIN
+      this.options.forEach((button, i) => {
+        button.setPosition(x, 230 + i * OPTION_SPACING)
+        button.toolTip.setPosition(x + 480, 238 + i * OPTION_SPACING)
+      })
+      const afterOptions = 250 + this.options.length * OPTION_SPACING
+      this.boardLabel.setPosition(x, afterOptions)
+      const swatchRow = afterOptions + 78
+      this.flavourSwatches.forEach((swatch, i) => {
+        swatch.setPosition(x + i * (SWATCH_SIZE + 22), swatchRow)
+        swatch.toolTip.setPosition(x + BOARD_FLAVOURS.length * (SWATCH_SIZE + 22), swatchRow + 20)
+      })
+      this.controlsHint.setPosition(x, afterOptions + 78 + SWATCH_SIZE + 45)
+      return this.options.concat(this.boardLabel, this.flavourSwatches, this.controlsHint)
+    }
+
+    // Art, name and cost per card.
+    buildCardGallery() {
+      this.cardGallery = CardDefinitions.CARDS
+        .filter(card => card.name !== "Placeholder")
+        .map((card, i) => {
+          const art = cardImages[card.name]
+          return {
+            description: card.description.split("<br><br>Cost")[0].replace(/<br>/g, " "),
+            art: new ImageButton(art.width, art.height, 0, 0)
+              .setImage(art)
+              .setScale(CARD_GALLERY_SCALE)
+              .setHoverEffect(0, -25, 0.5)
+              .setBounceEffect(0, 8, 0.05, i)
+              .setBufferDensity(CARD_GALLERY_SCALE * 2)
+              .updateGraphics()
+              .setShadow(true),
+            name: this.label(card.name, 36),
+            cost: this.label("Cost " + card.cost, 28, { colour: [178, 196, 230] })
+          }
+        })
+      this.cardBlurb = this.label(CARD_BLURB_HINT, 32, { align: CENTER })
+      this.layoutCardGallery()
+      return this.cardGallery.flatMap(card => [card.art, card.name, card.cost]).concat(this.cardBlurb)
+    }
+
+    layoutCardGallery() {
+      if (!this.cardGallery) return
+      const n = this.cardGallery.length, middle = this.width / (2 * this.guiScale)
+      let best = { scale: 0 }
+      for (let r = 1; r <= n; r++) {
+        const cols = Math.ceil(n / r), rowHeight = (GALLERY_BOTTOM - GALLERY_TOP) / r - CARD_GALLERY_GAP
+        const scale = Math.min(CARD_GALLERY_SCALE, (rowHeight - CARD_LABELS) / 890,
+          (middle * 2 - 2 * OVERLAY_MARGIN - (cols - 1) * CARD_GALLERY_GAP) / (cols * 640))
+        if (scale > best.scale) best = { scale, rows: r, cols, rowHeight }
+      }
+      const { scale, rows, cols, rowHeight } = best
+      const w = 640 * scale, h = 890 * scale
+      const centred = (button, x) => (x + (w - button.getGraphicsObject().width) / 2)
+      this.cardGallery.forEach((card, i) => {
+        const row = Math.floor(i / cols), inRow = Math.min(cols, n - row * cols)
+        const x = middle - (inRow * w + (inRow - 1) * CARD_GALLERY_GAP) / 2 +
+          (i % cols) * (w + CARD_GALLERY_GAP)
+        const y = GALLERY_TOP + row * (rowHeight + CARD_GALLERY_GAP)
+        card.art.setScale(scale).setPosition(x, y)
+        card.name.setPosition(centred(card.name, x), y + h + 15)
+        card.cost.setPosition(centred(card.cost, x), y + h + 62)
+      })
+      this.cardBlurb.setPosition(0, GALLERY_TOP + (rows - 1) * (rowHeight + CARD_GALLERY_GAP) + h + CARD_LABELS + 40)
+    }
+
+    // Reads how far it has got first, so turning back part way through stays smooth.
+    transitionOverlay(shut) {
+      this.overlayFrom = this.overlayAmount()
+      this.overlayAt = totalTime
+      this.overlayShut = shut
+    }
+
+    openOverlay(name) {
+      if (this.overlays[name]) { this.transitionOverlay(false); this.overlay = name }
+    }
+
+    closeOverlay() {
+      if (this.overlay && !this.overlayShut) this.transitionOverlay(true)
+    }
+
+    // 0 is the menu, 1 is the overlay, eased over OVERLAY_SECONDS.
+    overlayAmount() {
+      if (!this.overlay) return 0
+      const p = constrain((totalTime - this.overlayAt) / OVERLAY_SECONDS, 0, 1)
+      if (this.overlayShut && p >= 1) this.overlay = null
+      return lerp(this.overlayFrom, this.overlayShut ? 0 : 1, p * p * (3 - 2 * p))
+    }
+
+    // Keeps the last value so the board does not jump when the overlay closes.
+    boardOffset() {
+      if (this.overlay) this.lastBoardOffset = OVERLAY_BOARD[this.overlay]
+      return this.lastBoardOffset || OVERLAY_BOARD.cards
+    }
+
+    overlayButtons() {
+      const overlay = this.overlays[this.overlay]
+      return overlay ? [this.overlayBack, overlay.title, ...overlay.elements] : []
+    }
+
+    // slideX/slideY are where the group sits at amount 0.
+    drawElements(buttons, amount, slideX = 0, slideY = 0) {
+      canvas2d.drawingContext.globalAlpha = amount
+      for (const button of buttons) {
+        canvas2d.push()
+        button.drawIcon(canvas2d, this.guiScale,
+          (1 - amount) * slideX * this.guiScale * (button.align === RIGHT ? -1 : 1),
+          (1 - amount) * slideY * this.guiScale)
+        canvas2d.pop()
+      }
+      canvas2d.drawingContext.globalAlpha = 1
+    }
+
     setScreen(screen) {
       this.currentScreen.push(screen)
       this.screenSwitchTimeStamp = totalTime*targetFrameRate
     }
 
+
+    // canvas2d is a 2w x 2h quad at z=100. The view is 2*100*tan(fov/2) tall there, so pixels line up 1:1.
+    blitScale() {
+      return 100 * tan(this.cam.cameraFOV / 2) / this.height
+    }
 
     setCamera(Z) {
       let cam = this.cam
@@ -236,7 +488,7 @@ class GuiRenderer {
       this.setCamera(500);
       //noStroke();
       let rotationSpeed = 0.001; // Speed of rotation
-      let rotationAngle = totalTime*targetFrameRate * rotationSpeed; // Calculate rotation angle based on frame count
+      let rotationAngle = Settings.reduceMotion ? 0 : totalTime*targetFrameRate * rotationSpeed;
       rotateZ(rotationAngle); // Rotate around the Y-axis
       tint(125); // Apply a dark tint to make the background darker
 
@@ -341,8 +593,8 @@ class GuiRenderer {
       }
 
       this.renderResultOverlay()
+      if (Settings.showFps) this.drawElements([this.fpsReadout], 1)
 
-      canvas2d.pop()
       canvas2d.push()
         //console.log(maxcamtilt, mincamtilt)
         // Clamp the camera's camtilt angle
@@ -370,48 +622,42 @@ class GuiRenderer {
       }
       
       push()
-        scale(0.0621) //magic number. Why? nobody knows
+        scale(this.blitScale())
         image(canvas2d, -this.width, -this.height, (this.width), (this.height))
         pop()
       pop()
     }
   renderMenu() {
-    let wHeight = this.height
-    let wWidth = this.width
-    let mouseCoords = {x: mouseX, y: mouseY};
+    const t = this.overlayAmount()
     canvas2d.textAlign(LEFT)
     canvas2d.textSize(50)
     canvas2d.textFont(plunge)
     canvas2d.imageMode(CENTER)
     canvas2d.rectMode(CENTER)
     canvas2d.clear()
-    //canvas2d.background(200)
-    
-    let bounceSpeed = 0.05; // Speed of the bounce
-    let bounceHeight = 10*this.guiScale; // Height of the bounce
 
-    for (let i = 0; i < this.menuLetters.length; i++) {
-      canvas2d.push()
-      this.menuLetters[i].drawIcon(canvas2d, this.guiScale)
-      canvas2d.pop()
+    if (t < 1) {
+      this.drawElements(this.menuLetters, 1 - t, -400)
+      this.drawElements(this.menuButtonNames.map(name => this.menuButtons[name]), 1 - t, -400)
+    }
+    if (t > 0) {
+      const hovered = this.cardGallery.find(card => card.art.isHovered)
+      const blurb = hovered ? hovered.description : CARD_BLURB_HINT
+      if (this.cardBlurb.getText() !== blurb) this.cardBlurb.updateText(blurb)
+      this.drawElements(this.overlayButtons(), t, 0, 60)
+      push()
+      this.setCamera(101)
+      fill(0, 60 * t)
+      plane(600, 600)
+      pop()
+      pop()
     }
 
-
-    //Render menu buttons
-    canvas2d.pop()
-    
-
-    for (let i = 0; i < this.menuButtonNames.length; i++) {
-      canvas2d.push();
-      let buttonName = this.menuButtonNames[i];
-
-      this.menuButtons[buttonName].drawIcon(canvas2d, this.guiScale);
-      canvas2d.pop();
-    }
+    if (Settings.showFps) this.drawElements([this.fpsReadout], 1)
 
     push()
     this.setCamera(100)
-    scale(0.0621) //magic number. Why? nobody knows
+    scale(this.blitScale())
     image(canvas2d, -this.width, -this.height, (this.width), (this.height))
     pop()
 
@@ -467,6 +713,14 @@ class GuiRenderer {
     }
 
     clickGUIButton(x, y) {
+      if (this.overlayAmount() > 0.5) {
+        for (const button of this.overlayButtons()) {
+          if (typeof button.onClickCallBack == 'function') {
+            button.handleClick(x, y, this.guiScale)
+          }
+        }
+        return
+      }
       if (this.currentScreen[this.currentScreen.length - 1] == "menu") {
       for (let i = 0; i < this.menuButtonNames.length; i++) {
         let buttonName = this.menuButtonNames[i];

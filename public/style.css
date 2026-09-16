@@ -1,8 +1,85 @@
 html, body {
   height: 100%;
   width: 100%;
+  background: #150c28;
   margin: auto;
   overflow-y: hidden;
   overflow-x: hidden;
 }
 
+@font-face {
+  font-family: "Plunge";
+  src: url("Assets/Plunge.ttf") format("truetype");
+  font-display: swap;
+}
+
+/* Covers the page until the first frame is drawn - see script.js. */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  background: #150c28;
+  transition: opacity 0.5s ease;
+}
+
+#loading-screen.loaded {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-swirl {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(10, 4, 24, 0.3), rgba(10, 4, 24, 0.78)),
+              url("Assets/background-small.jpg") center no-repeat;
+}
+
+.loading-hint {
+  position: relative;
+  margin: 0;
+  font-family: "Plunge", "Trebuchet MS", sans-serif;
+  font-size: 21px;
+  letter-spacing: 0.14em;
+  color: #f3ecff;
+  text-shadow: 0 2px 10px rgba(8, 2, 20, 0.85);
+}
+
+.loading-pct {
+  display: inline-block;
+  min-width: 3.2em;
+}
+
+.loading-cards {
+  position: relative;
+  width: 124px;
+  height: 152px;
+}
+
+.loading-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 96px;
+  aspect-ratio: 640 / 890;
+  background: url("Assets/backofcard.png") center / contain no-repeat;
+  filter: drop-shadow(5px 5px 0 #000);
+  animation: card-float 2.1s ease-in-out infinite;
+}
+
+.card-back { --tilt: 22.5deg; }
+.card-front { --tilt: 11.25deg; animation-delay: -0.26s; }
+
+@keyframes card-float {
+  0%, 100% { transform: translateY(-5px) rotate(calc(var(--tilt) - 2.9deg)); }
+  50% { transform: translateY(5px) rotate(calc(var(--tilt) + 2.9deg)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #loading-screen { transition: none; }
+  .loading-card { animation: none; transform: rotate(var(--tilt)); }
+}

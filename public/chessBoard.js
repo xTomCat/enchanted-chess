@@ -1,6 +1,33 @@
 const FLASH_SECONDS = 0.45, MOVE_SECONDS = 0.28
 const PICK_MAT = mat4.create(), PICK_NEAR = vec3.create(), PICK_FAR = vec3.create(), PICK_DIR = vec3.create()
 const PROJ_MAT = mat4.create(), PROJ_PT = vec3.create()
+// Middle of the ramp. Black marble is mostly under 65, white marble over 210.
+const RAMP_MID = 112
+
+// 256-entry brightness -> [r, g, b] lookup table.
+function flavourRamp([shadow, mid, highlight]) {
+  const ramp = new Uint8Array(768)
+  for (let l = 0; l < 256; l++) {
+    const low = l < RAMP_MID
+    const from = low ? shadow : mid, to = low ? mid : highlight
+    const t = low ? l / RAMP_MID : (l - RAMP_MID) / (255 - RAMP_MID)
+    for (let c = 0; c < 3; c++) ramp[l * 3 + c] = from[c] + (to[c] - from[c]) * t
+  }
+  return ramp
+}
+
+// Gradient map: keeps each pixel's brightness, takes its colour from the ramp. Blend modes hid the veins.
+function paintFlavour(g, flavour) {
+  if (!flavour.ramp) return
+  const ramp = flavourRamp(flavour.ramp)
+  g.loadPixels()
+  const px = g.pixels
+  for (let i = 0; i < px.length; i += 4) {
+    const l = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) | 0
+    px[i] = ramp[l * 3]; px[i + 1] = ramp[l * 3 + 1]; px[i + 2] = ramp[l * 3 + 2]
+  }
+  g.updatePixels()
+}
 
 class Chessboard {
   constructor(width, height, tileSize, whiteTexture, blackTexture) {
@@ -12,27 +39,19 @@ class Chessboard {
     this.chessBoard = []
     this.rotAngle = 0
 
-    // atlas of random marble sections
-    const cell = tileSize * 5
-    this.atlas = createGraphics(this.width * cell, this.height * cell)
+    // Tiles keep the same piece of marble, so recolouring reuses the same stone.
+    this.cell = tileSize * 5
     for (let i = 0; i < this.height; i++) {
       this.chessBoard.push([]);
       for (let j = 0; j < this.width; j++) {
-        this.chessBoard[i].push({type: (i + j) % 2 === 0 ? "black" : "white"});
-        const src = this.chessBoard[i][j].type == "white" ? this.whiteTexture : this.blackTexture
-        this.atlas.image(src, j * cell, i * cell, cell, cell,
-          random(src.width - cell), random(src.height - cell), cell, cell)
-        this.atlas.noFill(); this.atlas.stroke(0); this.atlas.strokeWeight(3)
-        this.atlas.rect(j * cell, i * cell, cell, cell)
+        const type = (i + j) % 2 === 0 ? "black" : "white"
+        const src = type == "white" ? this.whiteTexture : this.blackTexture
+        this.chessBoard[i].push({ type: type,
+          marbleX: random(src.width - this.cell), marbleY: random(src.height - this.cell) });
       }
     }
-
-    // p5 treats a p5.Graphics texture as dirty every single frame and re-uploads the
-    // entire thing to the GPU. The atlas never changes after this, so we bake it into
-    // a p5.Image, which only uploads when its pixels actually change.
-    this.atlasImage = this.atlas.get()
-    this.atlas.remove()
-    this.atlas = null
+    this.flavour = BOARD_FLAVOURS[Settings.boardFlavour] || BOARD_FLAVOURS[0]
+    this.atlasImage = this.buildAtlas()
 
     // Calculate tile world positions
     let offsetX = (this.chessBoard[0].length - 1) * (this.tileSize / 2) - (this.tileSize / 2);
@@ -45,7 +64,38 @@ class Chessboard {
       }
     }
 
-    this.geometry = this.buildGeometry(cell)
+    this.geometry = this.buildGeometry(this.cell)
+  }
+
+  // Saved as an Image because p5 re-uploads a Graphics texture every frame.
+  buildAtlas() {
+    const cell = this.cell
+    const atlas = createGraphics(this.width * cell, this.height * cell)
+    atlas.pixelDensity(1)
+    for (const type of ["black", "white"]) {
+      for (let i = 0; i < this.height; i++) {
+        for (let j = 0; j < this.width; j++) {
+          const tile = this.chessBoard[i][j]
+          if (tile.type !== type) continue
+          const src = type == "white" ? this.whiteTexture : this.blackTexture
+          atlas.image(src, j * cell, i * cell, cell, cell, tile.marbleX, tile.marbleY, cell, cell)
+        }
+      }
+      if (type === "black") paintFlavour(atlas, this.flavour)
+    }
+    atlas.noFill(); atlas.stroke(0); atlas.strokeWeight(3)
+    for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) atlas.rect(j * cell, i * cell, cell, cell)
+    }
+    const baked = atlas.get()
+    atlas.remove()
+    return baked
+  }
+
+  // Rebuilds the texture, ~10ms.
+  setFlavour(flavour) {
+    this.flavour = flavour
+    this.atlasImage = this.buildAtlas()
   }
 
   // Tiles get baked into a static mesh
@@ -256,6 +306,9 @@ class Chessboard {
     push()
     if (guiRenderer) {
       if (guiRenderer.getState() == "menu") {
+      const overlay = guiRenderer.overlayAmount()
+      const parked = guiRenderer.boardOffset()
+      if (overlay) { translate(parked[0] * overlay, parked[1] * overlay, parked[2] * overlay); rotateX(parked[3] * overlay) }
       if ((totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp) < 100) {
         let t = (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp)/100;
         let tempRot = easeOutQuad(t, 0, this.rotAngle, 1);
@@ -265,7 +318,7 @@ class Chessboard {
       } else {
         translate(this.height * this.tileSize / 2, 0, 0);
         rotateY(this.rotAngle);
-        this.rotAngle += 0.002 * deltaTime * targetFrameRate;
+        if (!Settings.reduceMotion) this.rotAngle += 0.002 * deltaTime * targetFrameRate;
         this.rotAngle = ((this.rotAngle + PI) % TWO_PI + TWO_PI) % TWO_PI - PI;
       }
       } else if (guiRenderer.getState() == "game" && (totalTime*targetFrameRate - guiRenderer.screenSwitchTimeStamp) < 100) {
@@ -387,7 +440,7 @@ class Chessboard {
         //Added this to get the available moves for the selected piece
         if (chessBoard[x][y].piece) {
           availableMoves = this.getTileData(x, y).piece.getAvailableMoves(this, x, y);
-          this.markAvailableMoves(availableMoves)
+          if (Settings.moveHints) this.markAvailableMoves(availableMoves)
         }
       }
     } else {

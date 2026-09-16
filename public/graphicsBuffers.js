@@ -1,3 +1,8 @@
+// Uses the font's own sizes. The browser gives the wrong widths until @font-face has loaded.
+function measureText(text, size, font = plunge) {
+    return font.textBounds(text, 0, 0, size).w
+}
+
 class Button {
     constructor(width, height, x, y) {
         this.width = width;
@@ -29,6 +34,7 @@ class Button {
         this.anchorBottom = false
         this.onClickCallback = null
         this.toolTip = null
+        this.toolTipWhileSelected = true
         this.fadeIn = false
         this.isToolTip = false
         this.hoverOverride = false
@@ -140,6 +146,12 @@ class Button {
 
     clearBuffer() {
         this.gBuffer.clear();
+    }
+
+    // Cards keep their tooltip on while selected; other buttons turn this off.
+    setToolTipWhileSelected(boolean) {
+        this.toolTipWhileSelected = boolean
+        return this
     }
 
     setToolTip(graphic) {
@@ -358,7 +370,7 @@ class Button {
                 if (this.isHovered && (isACard || !aCardIsSelected)) {
                     show = true
                 }
-                else if (this.isSelected && !anotherCardIsHovered) {
+                else if (this.isSelected && this.toolTipWhileSelected && !anotherCardIsHovered) {
                     show = true
                 }
 
@@ -367,6 +379,7 @@ class Button {
                     this.toolTip.drawIcon(canvas2d, guiScale)
                     canvas2d.pop()
                 } else {
+                    this.toolTip.fadeStartTime = null //still fades in when hovered
                     this.toolTip.resetHoverAttributes()
                 }
             
@@ -539,13 +552,13 @@ class Button {
             mouseIsHovered = true
         }
 
-        if (this.bounceX !== 0) {
+        if (this.bounceX !== 0 && !Settings.reduceMotion) {
             bounceOffsetX = sin((totalTime*targetFrameRate * this.bounceSpeed) + (this.bounceIndex * PI / 4)) * this.bounceX * guiScale;
         } 
-        if (this.bounceY !== 0) {
+        if (this.bounceY !== 0 && !Settings.reduceMotion) {
             bounceOffsetY = sin((totalTime*targetFrameRate * this.bounceSpeed) + (this.bounceIndex * PI / 4)) * this.bounceY * guiScale;
         }
-        if (this.maxRotation !== 0) {
+        if (this.maxRotation !== 0 && !Settings.reduceMotion) {
             rotationOffset = sin((totalTime*targetFrameRate * this.rotationSpeed) + (16 * this.minRotation)) * 0.05; // Rotation offset for slight rotation
         }
 
@@ -629,6 +642,7 @@ class Button {
 
         }
         canvas.pop()
+        canvas.pop() //closes the push at the top of drawIcon
         fill(255)
     }
 
@@ -657,11 +671,6 @@ class TextButton extends Button {
 
     }
     initIcon() {
-        const tempCanvas = document.createElement('canvas');
-        const tempContext = tempCanvas.getContext('2d');
-        tempContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
-        const textWidth = tempContext.measureText(this.text).width; // Measure the actual text width
-        const textHeight = this.size * 1.2; // Height is directly based on the size
         if (this.align === RIGHT) {
             this.x = this.x - this.getWidth() / 2;
         }
@@ -735,21 +744,18 @@ class TextButton extends Button {
     }
 
     getTextHeight() {
-        canvas2d.drawingContext.font = `${this.size}px plunge`;
-        const descent = canvas2d.drawingContext.measureText(this.text).actualBoundingBoxDescent || this.size * 0.25;
+        const descent = this.size * 0.25;
         const lines = this.countLineBreaks(this.text) + 1 + (this.title ? 1 : 0);
         const titleExtra = this.titleSize ? this.titleSize - this.size : 0;
         return Math.ceil(this.size * lines + titleExtra + descent + 10);
     }
 
     getTextWidth() {
-        canvas2d.drawingContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
-        return canvas2d.drawingContext.measureText(this.text).width + 20; // Measure the actual text width, with an offset for the shadow
+        return measureText(this.text, this.size) + 20; // With an offset for the shadow
     }
 
     getCharWidth(char) {
-        canvas2d.drawingContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
-        return canvas2d.drawingContext.measureText(char).width; // Measure the actual text width, with an offset for the shadow
+        return measureText(char, this.size)
     }
 
     setBackPlate(r, g, b) {
@@ -819,9 +825,7 @@ class TextButton extends Button {
     }
 
     getDimensionsWithComponents(type) {
-        canvas2d.drawingContext.font = `${this.size}px plunge`; // Assuming 'plunge' is the font name
-        const textWidth = canvas2d.drawingContext.measureText(this.text).width + 5; // Measure the actual text width, with an offset for the shadow
-        const textHeight = canvas2d.drawingContext.measureText(this.text).height + 5; // Height is directly based on the size
+        const textWidth = measureText(this.text, this.size) + 5; // With an offset for the shadow
         let buttonWidth = this.width //default values
         let buttonHeight = this.height
         let buttonMinWidth = this.x
@@ -829,10 +833,6 @@ class TextButton extends Button {
         if (textWidth > this.width) {
             buttonWidth = textWidth //Offset for shadow
         }
-        if (textHeight > this.height) {
-            buttonHeight = textHeight//Offset for shadow
-        }
-
         if (this.components.length > 0) {
             for (let component of this.components) {
                 if (component.x > buttonWidth) {

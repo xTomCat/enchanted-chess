@@ -50,7 +50,25 @@ function setCancelHint(text) {
 const cardHeight = 435
 const cardWidth = 313
 
+function trackLoads() {
+  const pct = document.querySelector("#loading-screen .loading-pct")
+  let total = 0, done = 0
+  for (const name of ["loadImage", "loadFont", "loadModel"]) {
+    const load = window[name]
+    window[name] = path => (total++, load(path, () => {
+      if (pct) pct.textContent = Math.round(++done / total * 100) + "%"
+    }))
+  }
+}
+
+function hideLoadingScreen() {
+  const screen = document.getElementById("loading-screen")
+  screen.classList.add("loaded")
+  screen.addEventListener("transitionend", () => screen.remove(), {once: true})
+}
+
 function preload() {
+  trackLoads()
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
   blackTexture = loadImage("Assets/blackMarble.jpg");
   montserrat = loadFont("Assets/Montserrat-Bold.ttf");
@@ -78,6 +96,7 @@ function preload() {
 }
 
 function setup() {
+  Settings.load()
   socket = io()
   createCanvas(windowWidth, windowHeight, WEBGL)
   canvas2d = createGraphics(windowWidth, windowHeight)
@@ -275,6 +294,7 @@ function setup() {
       setStatus("Leaving...")
     }
   })
+
 }
 
 function compareBoard(chessBoard, board) {
@@ -379,6 +399,7 @@ function draw() {
   guiRenderer.renderBackground()
   if (frameCount % targetFrameRate == 0) {
     fps = round(frameRate())
+    if (Settings.showFps) guiRenderer.fpsReadout.updateText(fps + " FPS")
   }
   if (camAngle !== null && guiRenderer.getState() == "game") {
     camAngle += (camTarget - camAngle) * min(1, deltaTime * 4)
@@ -407,7 +428,8 @@ function draw() {
         }
         else {
 
-          orbitControl()
+          const sensitivity = Settings.cameraSpeed * (Settings.invertCamera ? -1 : 1)
+          orbitControl(sensitivity, sensitivity)
         }
     }
   }
@@ -419,6 +441,8 @@ function draw() {
   //guiRenderer.guiRendererCanvas.clear()
   //image(guiRenderer.guiRendererCanvas, 0, 0, windowWidth-15, windowHeight-15)
   pop()
+
+  if (frameCount === 1) hideLoadingScreen()
 }
 
 function windowResized() {
@@ -432,6 +456,7 @@ function windowResized() {
     const baseWidth = 1920;
     const baseHeight = 1080;
     guiRenderer.guiScale = Math.min(guiRenderer.width / baseWidth, guiRenderer.height / baseHeight);
+    guiRenderer.layoutCardGallery()
 }
 if (cardDataManager) {
   cardDataManager.updateCardPositions()
@@ -443,8 +468,9 @@ function keyPressed() {
   if (key === "F2") {
     debug = !debug
   }
-
-
+  if (keyCode === ESCAPE && guiRenderer) {
+    guiRenderer.closeOverlay()
+  }
 }
 
 function mousePressed() {

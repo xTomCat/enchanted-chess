@@ -11,10 +11,12 @@
   <meta property="og:image" content="Assets/title.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="Assets/favicon.png">
+  <link rel="preload" as="image" href="Assets/background-small.jpg" />
   <link href="style.css" rel="stylesheet" type="text/css" />
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+  <script src="settings.js"></script>
   <script src="script.js"></script>
   <script src="chessBoard.js"></script>
   <script src="chessPiece.js"></script>
@@ -26,4 +28,24 @@
 </head>
 
 <body>
+  <div id="loading-screen">
+    <div class="loading-swirl"></div>
+    <p class="loading-hint">Loading&hellip; <span class="loading-pct">0%</span></p>
+    <div class="loading-cards">
+      <div class="loading-card card-back"></div>
+      <div class="loading-card card-front"></div>
+    </div>
+  </div>
+
+  <script>
+    function fitSwirl() {
+      var w = innerWidth, h = innerHeight
+      var factor = Math.min(w / 2560, h / 1440) * 1.5 / Math.min(w / 1920, h / 1080, 1)
+      var drawn = Math.round(1440 * factor * 1.6)
+      document.querySelector(".loading-swirl").style.backgroundSize =
+        "auto, " + Math.round(drawn * 16 / 9) + "px " + drawn + "px"
+    }
+    fitSwirl()
+    addEventListener("resize", fitSwirl)
+  </script>
 </body>
