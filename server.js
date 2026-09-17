@@ -16,7 +16,7 @@ const THINK_MS = 500;
 const CAPTURE_ENERGY = { pawn: 1, default: 2 };
 
 let connectedPlayers = [];
-let games = {};
+let games = Object.create(null);
 const MAX_GAMES = 200;
 
 process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
@@ -159,6 +159,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('nickname', (nickname, roomCode) => {
+        nickname = typeof nickname === 'string' ? nickname.trim().slice(0, 20) : '';
+        if (!nickname) return;
         const player = connectedPlayers.find(p => p.socketId === socket.id);
         
         if (player) {
@@ -184,7 +186,8 @@ io.on('connection', (socket) => {
           io.to(socket.id).emit('error', 'Could not create a room right now!');
           return;
         }
-        const roomCode = generateRoomCode6Digits();
+        let roomCode = generateRoomCode6Digits();
+        while (games[roomCode]) roomCode = generateRoomCode6Digits();
         const game = new Game(roomCode);
         game.solo = !!solo;
         
