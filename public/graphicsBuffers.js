@@ -7,7 +7,7 @@ function hudHeight() {
 }
 
 // Uses the font's own sizes. The browser gives the wrong widths until @font-face has loaded.
-function measureText(text, size, font = plunge) {
+function measureText(text, size, font = gameFont) {
     return font.textBounds(text, 0, 0, size).w
 }
 
@@ -697,7 +697,7 @@ class TextButton extends Button {
             this.x = this.x - this.getWidth() / 2;
         }
         this.gBuffer.resizeCanvas(this.getWidth(), this.getHeight());
-        this.gBuffer.textFont(plunge); //I'll change this if I ever need to use a different font.
+        this.gBuffer.textFont(gameFont); //I'll change this if I ever need to use a different font.
         this.gBuffer.textSize(this.size);
         this.gBuffer.textAlign(LEFT);
         this.textWithShadow(this.text);
@@ -797,7 +797,7 @@ class TextButton extends Button {
 
     updateGraphics() {
         this.gBuffer.clear();
-        this.gBuffer.textFont(plunge);
+        this.gBuffer.textFont(gameFont);
         this.gBuffer.textSize(this.size);
         this.gBuffer.textAlign(LEFT);
         this.width = this.getDimensionsWithComponents("width")

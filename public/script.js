@@ -28,6 +28,7 @@ let totalTimeFloor = 0
 let targetFrameRate = 60
 let selectedThisClick = false
 let cardImages = {}
+let gameFont
 let camAngle = null, camTarget = 0
 let statusHoldUntil = 0
 let baseStatus = ""
@@ -71,7 +72,7 @@ function preload() {
   trackLoads()
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
   blackTexture = loadImage("Assets/blackMarble.jpg");
-  plunge = loadFont("Assets/Plunge.ttf");
+  gameFont = loadFont("Assets/BubblegumSans-Regular.ttf");
   bishopModel = loadModel('Assets/models/chessBishop.obj');
   rookModel = loadModel('Assets/models/chessCastle.obj');
   knightModel = loadModel('Assets/models/chessKnight.obj');
@@ -114,7 +115,7 @@ function setup() {
   cam._orbit(
     0, 0, -0.55
     );
-  textFont(plunge)
+  textFont(gameFont)
   textSize(5)
   textAlign(CENTER)
   imageMode(CORNERS)

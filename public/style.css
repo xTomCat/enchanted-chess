@@ -8,8 +8,8 @@ html, body {
 }
 
 @font-face {
-  font-family: "Plunge";
-  src: url("Assets/Plunge.ttf") format("truetype");
+  font-family: "Bubblegum Sans";
+  src: url("Assets/BubblegumSans-Regular.ttf") format("truetype");
   font-display: swap;
 }
 
@@ -41,7 +41,7 @@ html, body {
 .loading-hint {
   position: relative;
   margin: 0;
-  font-family: "Plunge", "Trebuchet MS", sans-serif;
+  font-family: "Bubblegum Sans", "Trebuchet MS", sans-serif;
   font-size: 21px;
   letter-spacing: 0.14em;
   color: #f3ecff;
@@ -92,7 +92,7 @@ html, body {
   align-items: center;
   justify-content: center;
   background: rgba(10, 4, 24, 0.82);
-  font-family: "Plunge", "Trebuchet MS", sans-serif;
+  font-family: "Bubblegum Sans", "Trebuchet MS", sans-serif;
   color: #f3ecff;
   text-shadow: 0 2px 10px rgba(8, 2, 20, 0.85);
 }
