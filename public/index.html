@@ -25,6 +25,12 @@
   <script src="cardDataManager.js"></script>
   <script src="shared/pieceMovement.js"></script>
   <script src="shared/cardDefinitions.js"></script>
+  <script>
+    // Only fetch demo tool when needed
+    if (new URLSearchParams(location.search).has("demo")) {
+      document.write('<script src="tools/demoMode.js"><\/script>')
+    }
+  </script>
 </head>
 
 <body>

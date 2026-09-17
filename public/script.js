@@ -71,9 +71,6 @@ function preload() {
   trackLoads()
   whiteTexture = loadImage("Assets/whiteMarble.jpg");
   blackTexture = loadImage("Assets/blackMarble.jpg");
-  montserrat = loadFont("Assets/Montserrat-Bold.ttf");
-  inconsolata = loadFont("Assets/Inconsolata-Bold.ttf");
-  companion = loadFont("Assets/COMPANION.otf");
   plunge = loadFont("Assets/Plunge.ttf");
   bishopModel = loadModel('Assets/models/chessBishop.obj');
   rookModel = loadModel('Assets/models/chessCastle.obj');
@@ -83,7 +80,7 @@ function preload() {
   kingModel = loadModel('Assets/models/chessKing.obj');
   title = loadImage('Assets/title.png');
   backofcard = loadImage('Assets/backofcard.png');
-  menubackground = loadImage('Assets/background.png')
+  menubackground = loadImage('Assets/background.jpg')
   personicon = loadImage('Assets/personicon.png')
   hamburgericon = loadImage('Assets/Hamburger_icon.svg.png')
   manadiamondred = loadImage('Assets/manadiamondred.png')

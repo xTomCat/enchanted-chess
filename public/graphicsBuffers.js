@@ -1,3 +1,11 @@
+function hudWidth() {
+  return typeof canvas2d !== "undefined" && canvas2d ? canvas2d.width : windowWidth
+}
+
+function hudHeight() {
+  return typeof canvas2d !== "undefined" && canvas2d ? canvas2d.height : windowHeight
+}
+
 // Uses the font's own sizes. The browser gives the wrong widths until @font-face has loaded.
 function measureText(text, size, font = plunge) {
     return font.textBounds(text, 0, 0, size).w
@@ -132,9 +140,9 @@ class Button {
 
     screenCenter(guiScale) {
         let x = this.x * guiScale, y = this.y * guiScale
-        if (this.align == RIGHT) x = windowWidth + x
-        else if (this.align == CENTER) x = (windowWidth + 15) / 2
-        if (this.anchorBottom) y = windowHeight - (this.gBuffer.height - this.y) * guiScale
+        if (this.align == RIGHT) x = hudWidth() + x
+        else if (this.align == CENTER) x = hudWidth() / 2
+        if (this.anchorBottom) y = hudHeight() - (this.gBuffer.height - this.y) * guiScale
         return { x: x + this.gBuffer.width * guiScale * this.scale / 2,
                  y: y + this.gBuffer.height * guiScale * this.scale / 2 }
     }
@@ -282,12 +290,12 @@ class Button {
         let buttonX = this.x * guiScale; // Distance from left of the screen
         let buttonY = this.y * guiScale;
         if (this.align == RIGHT) {
-            buttonX = windowWidth + buttonX
+            buttonX = hudWidth() + buttonX
         } else if (this.align == CENTER) {
-            buttonX = ((windowWidth+15)/2)
+            buttonX = hudWidth() / 2
         }
         if (this.anchorBottom) {
-            buttonY = windowHeight - (this.gBuffer.height - this.y) * guiScale
+            buttonY = hudHeight() - (this.gBuffer.height - this.y) * guiScale
         }
         let buttonWidth = (this.hitWidth || this.gBuffer.width) * guiScale * this.scale; // Approximate width of the button
         let buttonHeight = this.gBuffer.height * guiScale * this.scale; // Approximate height of the button
@@ -490,13 +498,13 @@ class Button {
         let buttonX = this.x * guiScale; // Distance from left of the screen
         let buttonY = this.y * guiScale;
         if (this.align == RIGHT) {
-            buttonX = windowWidth + buttonX
+            buttonX = hudWidth() + buttonX
         } else if (this.align == CENTER) {
-            buttonX = ((windowWidth+15)/2)
+            buttonX = hudWidth() / 2
             canvas.imageMode(CENTER)
         }
         if (this.anchorBottom) {
-            buttonY = windowHeight - (this.gBuffer.height - this.y) * guiScale
+            buttonY = hudHeight() - (this.gBuffer.height - this.y) * guiScale
         }
         let buttonWidth = (this.hitWidth || this.gBuffer.width) * guiScale * this.scale; // Approximate width of the button
         let buttonHeight = this.gBuffer.height * guiScale * this.scale; // Approximate height of the button
@@ -1000,7 +1008,7 @@ class PlayerEnergyBar extends Button {
         this.circle = new ImageButton(manaorb.width, manaorb.height, 0, 0).setImage(manaorb.get(0, 0 , manaorb.width, manaorb.height)).updateGraphics().setShadow(true)
         this.maxEnergy = 6;
         this.hitWidth = 500;
-        this.toolTipBuffer = new TextButton(600, 400, 50, windowHeight * 0.2)
+        this.toolTipBuffer = new TextButton(600, 400, 50, hudHeight() * 0.2)
             .setTitle("Energy", 70)
             .setText("Spend energy to cast cards.<br><br>Capture a pawn: +1<br>Capture any other piece: +2<br><br>Maximum: " + this.maxEnergy)
             .setTextSize(50)

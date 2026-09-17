@@ -7,6 +7,8 @@ const CARD_FLIGHT = {
   bank: 1,
 }
 const CARD_LAYOUT_FRAMES = 15
+const CARD_BOTTOM_MARGIN = 25
+const CARD_FAN_DROP = 20
 
 class CardDataManager {
     constructor() {
@@ -215,17 +217,23 @@ class CardDataManager {
       if (this.playerDeck.length === 0) {
         return;
       }
-      let screenMiddle = windowWidth / 2;
-      let cardWidth = this.playerDeck[0].iconBuffer.width * this.playerDeck[0].iconBuffer.scale * guiRenderer.guiScale;
-      let totalWidth = (this.playerDeck.length * cardWidth * guiRenderer.guiScale) + ((this.playerDeck.length - 1) * 10); // Assumes each card is the same width, and 20 pixels between each card.
-      let startX = screenMiddle - (totalWidth / 2) * guiRenderer.guiScale
+      const guiScale = guiRenderer.guiScale;
+      const buffer = this.playerDeck[0].iconBuffer;
+      const cardWidth = buffer.width * buffer.scale * guiScale;
+      const cardHeight = buffer.gBuffer.height * buffer.scale * guiScale;
+
+      const step = cardWidth + 20;
+      const span = ((this.playerDeck.length - 1) * step) + (cardWidth / guiScale);
+      const startX = ((hudWidth() / guiScale) - span) / 2;
+
+      const deepest = ((this.playerDeck.length - 1) / 2) * CARD_FAN_DROP;
+      const restY = buffer.gBuffer.height - ((CARD_BOTTOM_MARGIN + cardHeight) / guiScale) - deepest;
       for (let i = 0; i < this.playerDeck.length; i++) {
         let card = this.playerDeck[i].iconBuffer;
-        let x = startX + (i * (cardWidth + 20));
-        let y = windowHeight * 0.6;
+        let x = startX + (i * step);
         let totalCards = this.playerDeck.length;
-        let heightAdjustment = Math.abs(i - (totalCards - 1) / 2) * 20; // Adjust the multiplier for desired height effect
-        card.animateTo(x, y + heightAdjustment, CARD_LAYOUT_FRAMES);
+        let heightAdjustment = Math.abs(i - (totalCards - 1) / 2) * CARD_FAN_DROP;
+        card.animateTo(x, restY + heightAdjustment, CARD_LAYOUT_FRAMES);
 
         // Calculate rotation angle based on position relative to center
         
@@ -268,7 +276,7 @@ class CardObject {
   }
 
    createBuffers() {
-      let toolTipBuffer = new ImageButton(this.image.width, this.image.height, 50, windowHeight *0.2)
+      let toolTipBuffer = new ImageButton(this.image.width, this.image.height, 50, hudHeight() *0.2)
         .setImage(this.image)
         .setScale(1)
         .setFadeIn(true)

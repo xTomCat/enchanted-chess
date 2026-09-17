@@ -250,6 +250,8 @@ class GuiRenderer {
     setButtonText(buttonName, text) {
       if (this.menuButtons[buttonName]) {
         this.menuButtons[buttonName].setText(text).updateGraphics()
+      } else if (this.ingameGuiElements[buttonName]) {
+        this.ingameGuiElements[buttonName].updateText(text)
       }
     }
 
