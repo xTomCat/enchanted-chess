@@ -23,8 +23,22 @@ class CardDataManager {
     }
 
     resetDeck() {
-      this.playerDeck = [];
-      ["Fireball", "Summon Pawn", "Blink", "Transmute"].forEach(name => this.addCardToDeck(name));
+      this.flights = []
+      this.clearPendingPlay()
+      const defaults = ["Fireball", "Summon Pawn", "Blink", "Transmute"];
+      const deck = [];
+      for (const name of defaults) {
+        const existing = this.playerDeck.find(card => card.name === name);
+        if (existing) {
+          this.playerDeck.splice(this.playerDeck.indexOf(existing), 1);
+          deck.push(existing);
+        } else {
+          deck.push(new CardObject(this.cardData.find(card => card.name === name), deck.length));
+        }
+      }
+      for (const card of this.playerDeck) card.iconBuffer.remove()
+      this.playerDeck = deck;
+      this.updateCardPositions()
     }
 
     deckAsServerData() {
@@ -51,12 +65,14 @@ class CardDataManager {
       }
 
     removeCardFromDeck(slot) {
-      this.playerDeck.splice(slot, 1);
+      const [card] = this.playerDeck.splice(slot, 1);
+      if (card) card.iconBuffer.remove()
       this.updateCardPositions()
     }
 
     popCardFromDeck() {
-      this.playerDeck.pop();
+      const card = this.playerDeck.pop();
+      if (card) card.iconBuffer.remove()
       this.updateCardPositions()
     }
 

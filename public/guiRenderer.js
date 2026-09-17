@@ -681,8 +681,9 @@ class GuiRenderer {
       panel.fill(238, 230, 245)
       panel.text(title, width / 2, 64)
       this.ingameGuiElements.cardChoicePanel = new ImageButton(width + pad, height + pad, x, y)
-        .setImage(panel)
+        .setImage(panel.get())
         .updateGraphics()
+      panel.remove()
       this.ingameGuiElementNames.push("cardChoicePanel")
 
       const addOption = (label, size, color, centreX, offsetY, onPick) => {
@@ -708,7 +709,12 @@ class GuiRenderer {
     }
 
     closeCardChoice() {
-      this.ingameGuiElementNames = this.ingameGuiElementNames.filter(name => !name.startsWith("cardChoice"))
+      this.ingameGuiElementNames = this.ingameGuiElementNames.filter(name => {
+        if (!name.startsWith("cardChoice")) return true
+        this.ingameGuiElements[name].remove()
+        delete this.ingameGuiElements[name]
+        return false
+      })
       this.cardChoiceOpen = false
     }
 

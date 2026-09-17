@@ -148,6 +148,20 @@ class Button {
         this.gBuffer.clear();
     }
 
+    remove() {
+        clearTimeout(this.energyTimer)
+        for (const component of this.components) component.remove()
+        this.components = []
+        if (this.toolTip) this.toolTip.remove()
+        this.toolTip = null
+        if (this.shadow) this.shadow.remove()
+        this.shadow = null
+        if (this.gBuffer) this.gBuffer.remove()
+        this.gBuffer = null
+        this.onClickCallBack = null
+        this.animCallback = null
+    }
+
     // Cards keep their tooltip on while selected; other buttons turn this off.
     setToolTipWhileSelected(boolean) {
         this.toolTipWhileSelected = boolean
@@ -674,7 +688,7 @@ class TextButton extends Button {
         if (this.align === RIGHT) {
             this.x = this.x - this.getWidth() / 2;
         }
-        this.gBuffer = createGraphics(this.getWidth(), this.getHeight());
+        this.gBuffer.resizeCanvas(this.getWidth(), this.getHeight());
         this.gBuffer.textFont(plunge); //I'll change this if I ever need to use a different font.
         this.gBuffer.textSize(this.size);
         this.gBuffer.textAlign(LEFT);
@@ -1119,6 +1133,16 @@ class Card extends ImageButton {
     
 }
 
+const chatGlyphs = new Map()
+
+function chatGlyph(character) {
+    let glyph = chatGlyphs.get(character)
+    if (!glyph) {
+        glyph = new TextButton(50, 50, 0, 0).setText(character).setTextSize(50).updateGraphics().setShadow(true)
+        chatGlyphs.set(character, glyph)
+    }
+    return glyph
+}
 
 class ChatInput extends Button {
     constructor(width, height, x, y) {
@@ -1130,13 +1154,8 @@ class ChatInput extends Button {
 }
 
     initIcon(update) {
-        let text = this.text.getGraphicsObject()
-        if (update) {
-            this.clearBuffer();
-            this.gBuffer.resizeCanvas(this.width, this.height)
-        } else {
-            this.gBuffer = createGraphics(this.width, this.height)
-        }
+        if (update) this.clearBuffer();
+        this.gBuffer.resizeCanvas(this.width, this.height)
         this.gBuffer.noFill()
         this.gBuffer.rect(0, 0, this.width, this.height)
         this.gBuffer.translate(9, -5)
@@ -1146,9 +1165,9 @@ class ChatInput extends Button {
             let text = this.textHeld[i].getGraphicsObject()
             this.gBuffer.image(text, 0, 0, text.width, text.height)
             this.gBuffer.translate(text.width, 0)
+        }
         this.gBuffer.pop()
     }
-}
 
     openChatBox() {
         this.focused = true
@@ -1168,7 +1187,7 @@ class ChatInput extends Button {
             this.textHeld.pop()
         }
         else {
-            this.textHeld.push(new TextButton(50, 50, 0, 0).setText(character).setTextSize(50).updateGraphics().setShadow(true))
+            this.textHeld.push(chatGlyph(character))
         }
 
     }
