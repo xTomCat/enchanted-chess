@@ -83,3 +83,47 @@ html, body {
   #loading-screen { transition: none; }
   .loading-card { animation: none; transform: rotate(var(--tilt)); }
 }
+
+#ask {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 4, 24, 0.82);
+  font-family: "Plunge", "Trebuchet MS", sans-serif;
+  color: #f3ecff;
+  text-shadow: 0 2px 10px rgba(8, 2, 20, 0.85);
+}
+
+#ask[hidden] { display: none; }
+
+#ask-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+#ask-label { font-size: 40px; letter-spacing: 0.14em; }
+
+#ask-input {
+  width: min(420px, 76vw);
+  font: inherit;
+  font-size: 46px;
+  text-align: center;
+  color: inherit;
+  background: none;
+  border: none;
+  border-bottom: 3px solid currentColor;
+  outline: none;
+  padding: 4px 0;
+}
+
+#ask-hint {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  opacity: 0.55;
+}

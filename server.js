@@ -152,9 +152,9 @@ io.on('connection', (socket) => {
         for(let player of games[roomCode].players) {
           player.leaveRoom(roomCode)
         }
+        console.log('Room closed: ' + roomCode);
+        console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
         delete games[roomCode];
-          console.log('Room closed: ' + roomCode);
-          console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
       }
     });
 
@@ -167,7 +167,7 @@ io.on('connection', (socket) => {
             const oldName = player.name;
             player.name = nickname;
             io.to(socket.id).emit('nicknameChanged', nickname);
-            console.log(oldName + ' changed changed their nickname to ' + nickname + "!");
+            console.log(oldName + ' changed their nickname to ' + nickname + "!");
             logConnectedPlayers()
             if (roomCode && games[roomCode]) {
               sendGameDataToRoom(roomCode)
@@ -199,7 +199,6 @@ io.on('connection', (socket) => {
         console.log(player.name + ' created a room with code: ' + roomCode);
         io.to(socket.id).emit('roomCreated', roomCode, player.name);
         player.setDeck(serverSideDeck);
-        console.log(serverSideDeck)
         player.setColor("white")
         player.generateBoardOnClient(game.getBoard())
         sendGameDataToRoom(roomCode)
@@ -220,7 +219,6 @@ io.on('connection', (socket) => {
         const game = games[roomCode];
         if (game && game.players.length < 2) {
           player.setDeck(serverSideDeck);
-          console.log(player.deck)
           game.addPlayer(player);
           socket.join('game-' + roomCode);
           console.log(player.name + ' joined a room with code: ' + roomCode);
@@ -330,11 +328,6 @@ class Player {
     
     }
 
-    isInGame() {
-      return games.find(g => g.players.includes(this))
-    }
-
-
   }
 
 class Game {
@@ -381,9 +374,6 @@ class Game {
     }
     getState() {
         return this.state;
-    }
-    setState(state) {
-        this.state = state;
     }
     getWidth() {
       return this.width
@@ -439,7 +429,7 @@ class Game {
       if (this.players[1]) {
         this.players[1].leaveRoom(this.roomCode)
       }
-      console.log("Game closed with ropm code: " + this.roomCode);
+      console.log("Game closed with room code: " + this.roomCode);
       console.log("Total open games: " + Object.keys(games).length + " -> " + (Object.keys(games).length - 1))
       delete games[this.roomCode];
       this.players = [];
@@ -550,10 +540,6 @@ class Game {
         this.setTileData(5, 0, { piece: new ChessPiece("bishop", "black") });
         this.setTileData(6, 0, { piece: new ChessPiece("knight", "black") });
         this.setTileData(7, 0, { piece: new ChessPiece("rook", "black") });
-        for (let i = 0; i < this.width; i++) {
-          this.setTileData(i, 1, { piece: new ChessPiece("pawn", "black") });
-          this.setTileData(i, this.height - 2, { piece: new ChessPiece("pawn", "white") });
-        }
         this.setTileData(0, this.height - 1, { piece: new ChessPiece("rook", "white") });
         this.setTileData(1, this.height - 1, { piece: new ChessPiece("knight", "white") });
         this.setTileData(2, this.height - 1, { piece: new ChessPiece("bishop", "white") });
@@ -751,11 +737,6 @@ class CardDataManager {
   loadCardData() {
     this.cardData = CardDefinitions.CARDS.map(card => ({ id: card.id, name: card.name, cost: card.cost }));
   }
-
-  cardExists(name) {
-    return this.cardData.find(card => card.name === name);
-  }
-
 
 }
 

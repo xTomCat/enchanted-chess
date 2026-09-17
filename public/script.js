@@ -338,12 +338,30 @@ function playSolo() {
   socket.emit('createRoom', cardDataManager.deckAsServerData(), true)
 }
 
+function askText(label, maxLength, inputMode) {
+  const box = document.getElementById("ask")
+  const input = document.getElementById("ask-input")
+  document.getElementById("ask-label").textContent = label
+  input.value = ""
+  input.maxLength = maxLength
+  input.inputMode = inputMode || "text"
+  box.hidden = false
+  return new Promise(resolve => {
+    const close = result => { box.hidden = true; box.onclick = null; resolve(result) }
+    box.onmousedown = event => event.stopPropagation()
+    box.onsubmit = event => { event.preventDefault(); close(input.value.trim() || null) }
+    input.onkeydown = event => { event.stopPropagation(); if (event.key === "Escape") close(null) }
+    setTimeout(() => {
+      input.focus()
+      box.onclick = event => { if (event.target === box) close(null) }
+    }, 0)
+  })
+}
+
 function promptNickName() {
-  const nickname = prompt("Please enter your nickname")
-  const roomCode = gameData ? gameData.roomCode : null
-  if (nickname) {
-    socket.emit('nickname', nickname, roomCode)
-  }
+  askText("Enter your nickname", 20).then(nickname => {
+    if (nickname) socket.emit('nickname', nickname, gameData ? gameData.roomCode : null)
+  })
 }
 
 function copyInviteLink() {
@@ -357,10 +375,9 @@ function copyInviteLink() {
 }
 
 function joinGameByRoomCode() {
-  let roomCode = prompt("Please enter the room code")
-  if (roomCode) {
-    socket.emit('joinGame', roomCode, cardDataManager.deckAsServerData())
-  }
+  askText("Enter the room code", 6, "numeric").then(roomCode => {
+    if (roomCode) socket.emit('joinGame', roomCode, cardDataManager.deckAsServerData())
+  })
 }
 
 function easeOutElastic (t, b, c, d) {

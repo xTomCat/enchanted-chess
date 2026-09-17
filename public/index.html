@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -54,4 +54,13 @@
     fitSwirl()
     addEventListener("resize", fitSwirl)
   </script>
+
+  <div id="ask" hidden>
+    <form id="ask-form">
+      <label id="ask-label" for="ask-input"></label>
+      <input id="ask-input" autocomplete="off" spellcheck="false">
+      <p id="ask-hint">Enter to confirm</p>
+    </form>
+  </div>
 </body>
+</html>
